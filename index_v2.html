@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOTE記事制作スタジオ | Daiki</title>
+<style>
+  :root {
+    --bg: #03060f;
+    --bg2: #060d1e;
+    --cyan: #00d4ff;
+    --cyan2: #0088cc;
+    --gold: #ffc800;
+    --green: #00ff88;
+    --red: #ff4466;
+    --text: #e8f4ff;
+    --text-dim: rgba(232,244,255,0.45);
+    --border: rgba(0,200,255,0.15);
+    --border2: rgba(0,200,255,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,180,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,180,255,0.025) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid rgba(255,200,0,0.4);
+    background: rgba(255,200,0,0.06);
+    padding: 6px 18px; border-radius: 2px;
+    font-size: 11px; letter-spacing: 0.2em;
+    color: rgba(255,210,0,0.85);
+    margin-bottom: 20px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .header h1 {
+    font-size: 36px; font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 40px rgba(0,180,255,0.4);
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+
+  .header h1 span {
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--cyan);
+    filter: drop-shadow(0 0 8px rgba(0,210,255,0.5));
+  }
+
+  .header p { font-size: 14px; color: var(--text-dim); letter-spacing: 0.1em; }
+
+  .api-section {
+    background: rgba(0,10,25,0.8);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .api-label {
+    font-size: 11px; color: var(--cyan);
+    letter-spacing: 0.15em; white-space: nowrap;
+    font-family: 'Courier New', monospace;
+  }
+
+  .api-input {
+    flex: 1;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .api-input:focus { border-color: var(--cyan2); }
+  .api-input::placeholder { color: rgba(255,255,255,0.2); }
+
+  .api-status {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .api-status.active { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+  .input-section { margin-bottom: 32px; }
+
+  .input-label {
+    font-size: 12px; color: var(--cyan);
+    letter-spacing: 0.15em; margin-bottom: 10px;
+    display: block; font-family: 'Courier New', monospace;
+  }
+
+  .theme-input {
+    width: 100%;
+    background: rgba(0,10,25,0.8);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 16px 20px;
+    color: var(--text);
+    font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical; min-height: 80px;
+  }
+  .theme-input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 20px rgba(0,200,255,0.1);
+  }
+  .theme-input::placeholder { color: rgba(255,255,255,0.2); }
+
+  .settings-row {
+    display: flex; gap: 12px; margin-top: 12px;
+    align-items: center; flex-wrap: wrap;
+  }
+
+  .setting-item { display: flex; align-items: center; gap: 8px; }
+
+  .setting-label {
+    font-size: 11px; color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+  }
+
+  .setting-select {
+    background: rgba(0,10,25,0.8);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 12px;
+    color: var(--text);
+    font-size: 12px;
+    outline: none; cursor: pointer;
+  }
+
+  .run-btn {
+    margin-top: 16px; width: 100%; padding: 16px;
+    background: linear-gradient(135deg, rgba(0,160,255,0.15), rgba(0,80,200,0.1));
+    border: 1px solid var(--cyan2);
+    border-radius: 8px; color: var(--cyan);
+    font-size: 15px; font-weight: 700;
+    letter-spacing: 0.2em; cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Courier New', monospace;
+  }
+  .run-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(0,180,255,0.25), rgba(0,100,220,0.2));
+    box-shadow: 0 0 30px rgba(0,180,255,0.2);
+  }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .run-btn.running { animation: btnPulse 1.5s ease-in-out infinite; }
+  @keyframes btnPulse {
+    0%,100% { box-shadow: 0 0 10px rgba(0,180,255,0.2); }
+    50% { box-shadow: 0 0 30px rgba(0,180,255,0.5); }
+  }
+
+  .team-section { margin-bottom: 32px; }
+
+  .section-title {
+    font-size: 11px; color: var(--text-dim);
+    letter-spacing: 0.2em; margin-bottom: 16px;
+    font-family: 'Courier New', monospace;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(to right, var(--border), transparent);
+  }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+
+  .member-card {
+    background: rgba(0,10,25,0.6);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 8px;
+    text-align: center;
+    transition: all 0.3s;
+    position: relative; overflow: hidden;
+  }
+
+  .member-card.active {
+    border-color: var(--cyan);
+    background: rgba(0,150,255,0.08);
+    box-shadow: 0 0 20px rgba(0,180,255,0.15);
+  }
+
+  .member-card.done {
+    border-color: var(--green);
+    background: rgba(0,255,136,0.05);
+  }
+
+  /* CEO・秘書は金色 */
+  .member-card.executive {
+    border-color: rgba(255,200,0,0.3);
+    background: rgba(255,200,0,0.04);
+  }
+  .member-card.executive.active {
+    border-color: var(--gold);
+    background: rgba(255,200,0,0.08);
+    box-shadow: 0 0 20px rgba(255,200,0,0.15);
+  }
+
+  .member-card.active::before {
+    content: '';
+    position: absolute; top: 0; left: -100%; width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    animation: scanBar 1.5s linear infinite;
+  }
+  @keyframes scanBar { to { left: 100%; } }
+
+  .member-emoji { font-size: 20px; margin-bottom: 5px; }
+  .member-name {
+    font-size: 10px; color: var(--text);
+    font-weight: 700; letter-spacing: 0.03em;
+    margin-bottom: 3px;
+  }
+  .member-role {
+    font-size: 9px; color: var(--text-dim); line-height: 1.3;
+  }
+  .member-status {
+    font-size: 8px; margin-top: 5px;
+    font-family: 'Courier New', monospace;
+    color: var(--text-dim); min-height: 12px;
+  }
+  .member-card.active .member-status { color: var(--cyan); }
+  .member-card.done .member-status { color: var(--green); }
+  .member-card.executive .member-status { color: var(--gold); }
+
+  .output-section { display: none; }
+  .output-section.visible { display: block; }
+
+  .output-block {
+    background: rgba(0,10,25,0.8);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 16px; overflow: hidden;
+    opacity: 0; transform: translateY(10px);
+    transition: all 0.4s ease;
+  }
+  .output-block.visible { opacity: 1; transform: translateY(0); }
+
+  .output-header {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(0,0,0,0.2);
+  }
+
+  .output-emoji { font-size: 16px; }
+  .output-name {
+    font-size: 12px; font-weight: 700;
+    color: var(--cyan);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.1em;
+  }
+  .output-tag {
+    margin-left: auto; font-size: 9px;
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.15em;
+  }
+
+  .output-body {
+    padding: 18px 20px; font-size: 14px;
+    line-height: 1.8; color: var(--text);
+    white-space: pre-wrap; word-break: break-word;
+    min-height: 60px;
+  }
+
+  .typing-cursor {
+    display: inline-block; width: 2px; height: 16px;
+    background: var(--cyan);
+    animation: blink 0.8s step-end infinite;
+    vertical-align: middle; margin-left: 2px;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .final-section { display: none; margin-top: 24px; }
+  .final-section.visible { display: block; }
+
+  .final-box {
+    background: rgba(0,15,35,0.9);
+    border: 1px solid var(--cyan);
+    border-radius: 8px; overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,180,255,0.1);
+  }
+
+  .final-header {
+    padding: 16px 20px;
+    background: rgba(0,180,255,0.08);
+    border-bottom: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .final-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--cyan);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.15em;
+  }
+
+  .copy-btn {
+    padding: 7px 18px;
+    background: rgba(0,180,255,0.1);
+    border: 1px solid var(--cyan2);
+    border-radius: 4px; color: var(--cyan);
+    font-size: 12px; cursor: pointer;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.1em; transition: all 0.2s;
+  }
+  .copy-btn:hover { background: rgba(0,180,255,0.2); }
+
+  .final-body {
+    padding: 24px; font-size: 15px;
+    line-height: 2; color: var(--text);
+    white-space: pre-wrap; word-break: break-word;
+  }
+
+  .char-count {
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-dim);
+    font-family: 'Courier New', monospace; text-align: right;
+  }
+
+  .error-msg {
+    padding: 12px 16px;
+    background: rgba(255,50,80,0.08);
+    border: 1px solid rgba(255,50,80,0.3);
+    border-radius: 6px; color: #ff6688;
+    font-size: 13px; margin-top: 12px; display: none;
+  }
+  .error-msg.visible { display: block; }
+
+  .progress-bar {
+    width: 100%; height: 2px;
+    background: var(--border); border-radius: 1px;
+    margin-bottom: 24px; overflow: hidden; display: none;
+  }
+  .progress-bar.visible { display: block; }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyan2), var(--cyan));
+    border-radius: 1px; width: 0%;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(0,180,255,0.6) 30%, rgba(0,220,255,0.9) 50%, rgba(0,180,255,0.6) 70%, transparent);
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="header-badge">⚠ POWERED BY CLAUDE API &nbsp;|&nbsp; DAIKI制作 &nbsp;|&nbsp; 14人チーム</div>
+    <h1>NOTE記事<span>制作スタジオ</span></h1>
+    <p>14人のAIチームがあなたのnote記事を本気で作る</p>
+  </div>
+
+  <div class="api-section">
+    <span class="api-label">API_KEY</span>
+    <input type="password" class="api-input" id="apiKey" placeholder="sk-ant-api03-..." oninput="checkApiKey()"/>
+    <div class="api-status" id="apiStatus"></div>
+  </div>
+
+  <div class="input-section">
+    <label class="input-label">// 記事テーマを入力</label>
+    <textarea class="theme-input" id="themeInput" placeholder="例：Claudeって実は性格があるAIだった話"></textarea>
+    <div class="settings-row">
+      <div class="setting-item">
+        <span class="setting-label">文字数目標:</span>
+        <select class="setting-select" id="wordCount">
+          <option value="1500">1,500字</option>
+          <option value="2000" selected>2,000字</option>
+          <option value="2500">2,500字</option>
+          <option value="3000">3,000字</option>
+        </select>
+      </div>
+      <div class="setting-item">
+        <span class="setting-label">記事スタイル:</span>
+        <select class="setting-select" id="articleStyle">
+          <option value="casual">カジュアル・口語</option>
+          <option value="professional">プロフェッショナル</option>
+          <option value="story">ストーリー形式</option>
+        </select>
+      </div>
+    </div>
+    <button class="run-btn" id="runBtn" onclick="startProduction()">
+      ▶ &nbsp;14人チーム起動 &nbsp;— &nbsp;記事制作開始
+    </button>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <div class="team-section">
+    <div class="section-title">PRODUCTION TEAM &nbsp;— &nbsp;14 MEMBERS</div>
+    <div class="team-grid" id="teamGrid">
+      <div class="member-card executive" id="m0">
+        <div class="member-emoji">👑</div>
+        <div class="member-name">CEO</div>
+        <div class="member-role">最終判断・品質基準</div>
+        <div class="member-status" id="s0">STANDBY</div>
+      </div>
+      <div class="member-card executive" id="m1">
+        <div class="member-emoji">🗂</div>
+        <div class="member-name">秘書</div>
+        <div class="member-role">進行管理・指示出し</div>
+        <div class="member-status" id="s1">STANDBY</div>
+      </div>
+      <div class="member-card" id="m2">
+        <div class="member-emoji">🎬</div>
+        <div class="member-name">総合演出</div>
+        <div class="member-role">方向性・全体統括</div>
+        <div class="member-status" id="s2">STANDBY</div>
+      </div>
+      <div class="member-card" id="m3">
+        <div class="member-emoji">📊</div>
+        <div class="member-name">データアナリスト</div>
+        <div class="member-role">市場調査・競合分析</div>
+        <div class="member-status" id="s3">STANDBY</div>
+      </div>
+      <div class="member-card" id="m4">
+        <div class="member-emoji">🎣</div>
+        <div class="member-name">フック職人</div>
+        <div class="member-role">冒頭の掴み</div>
+        <div class="member-status" id="s4">STANDBY</div>
+      </div>
+      <div class="member-card" id="m5">
+        <div class="member-emoji">✍️</div>
+        <div class="member-name">ライターA</div>
+        <div class="member-role">本文執筆・案A</div>
+        <div class="member-status" id="s5">STANDBY</div>
+      </div>
+      <div class="member-card" id="m6">
+        <div class="member-emoji">✍️</div>
+        <div class="member-name">ライターB</div>
+        <div class="member-role">本文執筆・案B</div>
+        <div class="member-status" id="s6">STANDBY</div>
+      </div>
+      <div class="member-card" id="m7">
+        <div class="member-emoji">⚖️</div>
+        <div class="member-name">会議</div>
+        <div class="member-role">A/B案を選定</div>
+        <div class="member-status" id="s7">STANDBY</div>
+      </div>
+      <div class="member-card" id="m8">
+        <div class="member-emoji">🔍</div>
+        <div class="member-name">編集者A</div>
+        <div class="member-role">構成・流れ</div>
+        <div class="member-status" id="s8">STANDBY</div>
+      </div>
+      <div class="member-card" id="m9">
+        <div class="member-emoji">🔍</div>
+        <div class="member-name">編集者B</div>
+        <div class="member-role">文章・読みやすさ</div>
+        <div class="member-status" id="s9">STANDBY</div>
+      </div>
+      <div class="member-card" id="m10">
+        <div class="member-emoji">👀</div>
+        <div class="member-name">読者</div>
+        <div class="member-role">初心者目線</div>
+        <div class="member-status" id="s10">STANDBY</div>
+      </div>
+      <div class="member-card" id="m11">
+        <div class="member-emoji">📈</div>
+        <div class="member-name">マーケターA</div>
+        <div class="member-role">バズ・導線</div>
+        <div class="member-status" id="s11">STANDBY</div>
+      </div>
+      <div class="member-card" id="m12">
+        <div class="member-emoji">📈</div>
+        <div class="member-name">マーケターB</div>
+        <div class="member-role">note検索対策</div>
+        <div class="member-status" id="s12">STANDBY</div>
+      </div>
+      <div class="member-card" id="m13">
+        <div class="member-emoji">✅</div>
+        <div class="member-name">ファクトチェッカー</div>
+        <div class="member-role">事実確認・最終仕上げ</div>
+        <div class="member-status" id="s13">STANDBY</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="output-section" id="outputSection">
+    <div class="section-title">TEAM OUTPUT</div>
+    <div id="outputBlocks"></div>
+  </div>
+
+  <div class="final-section" id="finalSection">
+    <div class="section-title">FINAL ARTICLE</div>
+    <div class="final-box">
+      <div class="final-header">
+        <span class="final-title">✅ &nbsp;完成記事</span>
+        <button class="copy-btn" onclick="copyArticle()">COPY</button>
+      </div>
+      <div class="final-body" id="finalBody"></div>
+      <div class="char-count" id="charCount"></div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar"></div>
+
+<script>
+const MEMBERS = [
+  { id: 0,  emoji: '👑', name: 'CEO',            role: '最終判断・品質基準' },
+  { id: 1,  emoji: '🗂', name: '秘書',            role: '進行管理・指示出し' },
+  { id: 2,  emoji: '🎬', name: '総合演出',        role: '方向性・全体統括' },
+  { id: 3,  emoji: '📊', name: 'データアナリスト', role: '市場調査・競合分析' },
+  { id: 4,  emoji: '🎣', name: 'フック職人',      role: '冒頭の掴み' },
+  { id: 5,  emoji: '✍️', name: 'ライターA',       role: '本文執筆・案A' },
+  { id: 6,  emoji: '✍️', name: 'ライターB',       role: '本文執筆・案B' },
+  { id: 7,  emoji: '⚖️', name: '会議',            role: 'A/B案を選定' },
+  { id: 8,  emoji: '🔍', name: '編集者A',         role: '構成・流れ' },
+  { id: 9,  emoji: '🔍', name: '編集者B',         role: '文章・読みやすさ' },
+  { id: 10, emoji: '👀', name: '読者',            role: '初心者目線' },
+  { id: 11, emoji: '📈', name: 'マーケターA',     role: 'バズ・導線' },
+  { id: 12, emoji: '📈', name: 'マーケターB',     role: 'note検索対策' },
+  { id: 13, emoji: '✅', name: 'ファクトチェッカー', role: '事実確認・最終仕上げ' },
+];
+
+function getPrompt(id, theme, wordCount, style, prev) {
+  const styleText = style === 'casual' ? 'カジュアル・口語・体験談ベース' : style === 'professional' ? 'プロフェッショナルで信頼感のある文体' : 'ストーリー形式';
+  switch(id) {
+    case 0: return `あなたはnote記事制作会社のCEOです。
+テーマ「${theme}」でnote記事を制作します。
+文字数: ${wordCount}字、スタイル: ${styleText}
+この記事に求める品質基準・方向性・読者への価値を200字以内で明確に指示してください。`;
+
+    case 1: return `あなたは敏腕秘書です。
+CEO指示: ${prev[0]}
+テーマ「${theme}」の記事制作に向けて、各チームメンバーへの作業指示を整理し、制作の進行プランを200字以内でまとめてください。`;
+
+    case 2: return `あなたはnote記事制作の総合演出家です。
+CEO指示: ${prev[0]}
+秘書プラン: ${prev[1]}
+テーマ「${theme}」の記事の方向性・ターゲット読者・構成の大枠・感情的フックを300字以内で指示してください。`;
+
+    case 3: return `あなたはnoteコンテンツのデータアナリストです。
+テーマ「${theme}」について、noteで読まれやすいか・競合記事との差別化ポイント・読者が求めている情報を分析し、300字以内でレポートしてください。`;
+
+    case 4: return `あなたはnote記事の冒頭フック専門家です。
+テーマ「${theme}」
+演出指示: ${prev[2]}
+分析: ${prev[3]}
+読者が最初の3行で続きを読みたくなる冒頭フックを2パターン作ってください。各150字以内。`;
+
+    case 5: return `あなたはnote記事ライターAです。
+テーマ「${theme}」
+演出指示: ${prev[2]}
+フック: ${prev[4]}
+${styleText}で本文案Aを書いてください。目標${wordCount}字程度。`;
+
+    case 6: return `あなたはnote記事ライターBです。
+テーマ「${theme}」
+演出指示: ${prev[2]}
+フック: ${prev[4]}
+ライターAとは異なるアプローチで本文案Bを書いてください。${styleText}で目標${wordCount}字程度。`;
+
+    case 7: return `あなたはnote記事の選定会議ディレクターです。
+以下のA案とB案を比較し、どちらがnoteで読まれやすいか理由と共に判断し、採用案の全文をそのまま出力してください。
+
+【A案】
+${prev[5]}
+
+【B案】
+${prev[6]}`;
+
+    case 8: return `あなたはnote記事の構成編集者Aです。
+以下の記事の構成・流れ・見出しを改善してください。改善後の全文を出力してください。
+
+${prev[7]}`;
+
+    case 9: return `あなたはnote記事の文章編集者Bです。
+以下の記事の文章表現・読みやすさ・テンポを改善してください。改善後の全文を出力してください。
+
+${prev[8]}`;
+
+    case 10: return `あなたはClaude初心者の読者です。
+以下の記事を読んで「わかりにくい部分」「もっと知りたい部分」「共感できる部分」を具体的にフィードバックし、そのフィードバックを反映した改善版の全文を出力してください。
+
+${prev[9]}`;
+
+    case 11: return `あなたはnote記事のバズ専門マーケターAです。
+以下の記事に対して、タイトル案を3つ提案し、導線・シェアされやすさを改善した最終版の全文を出力してください。
+
+${prev[10]}`;
+
+    case 12: return `あなたはnote検索対策の専門マーケターBです。
+以下の記事のnoteで検索されやすいキーワード最適化・ハッシュタグ提案・タイトル改善を行い、改善版の全文を出力してください。
+
+${prev[11]}`;
+
+    case 13: return `あなたはnote記事のファクトチェッカーです。
+以下の記事について：
+1. 事実確認（間違いがあれば修正）
+2. CEO品質基準との照合: ${prev[0]}
+3. 最終仕上げ・磨き上げ
+を行い、完成版の全文のみを出力してください。タイトルから本文まで全て含めてください。
+
+${prev[12]}`;
+  }
+}
+
+let results = [];
+let isRunning = false;
+
+function checkApiKey() {
+  const key = document.getElementById('apiKey').value;
+  const status = document.getElementById('apiStatus');
+  status.className = 'api-status' + (key.startsWith('sk-ant') ? ' active' : '');
+}
+
+function setMemberStatus(idx, status) {
+  const card = document.getElementById(`m${idx}`);
+  const statusEl = document.getElementById(`s${idx}`);
+  const isExec = idx <= 1;
+  card.className = 'member-card' + (isExec ? ' executive' : '') + (status === 'active' ? ' active' : status === 'done' ? ' done' : '');
+  statusEl.textContent = status === 'active' ? 'WORKING...' : status === 'done' ? 'DONE ✓' : 'STANDBY';
+}
+
+function showOutput(idx, text) {
+  const section = document.getElementById('outputSection');
+  section.className = 'output-section visible';
+  const blocks = document.getElementById('outputBlocks');
+  const m = MEMBERS[idx];
+  const block = document.createElement('div');
+  block.className = 'output-block';
+  block.id = `ob${idx}`;
+  block.innerHTML = `
+    <div class="output-header">
+      <span class="output-emoji">${m.emoji}</span>
+      <span class="output-name">${m.name}</span>
+      <span class="output-tag">${m.role}</span>
+    </div>
+    <div class="output-body" id="ob-body-${idx}"></div>
+  `;
+  blocks.appendChild(block);
+  setTimeout(() => block.className = 'output-block visible', 50);
+
+  const bodyEl = document.getElementById(`ob-body-${idx}`);
+  let i = 0;
+  const cursor = document.createElement('span');
+  cursor.className = 'typing-cursor';
+  bodyEl.appendChild(cursor);
+  const interval = setInterval(() => {
+    if (i < text.length) {
+      bodyEl.insertBefore(document.createTextNode(text.slice(i, i+4)), cursor);
+      i += 4;
+      bodyEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    } else {
+      clearInterval(interval);
+      cursor.remove();
+      bodyEl.textContent = text;
+    }
+  }, 8);
+}
+
+async function callClaude(prompt, apiKey) {
+  const response = await fetch('https://claude-proxy.adadr0626.workers.dev', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error?.message || 'API Error');
+  }
+  const data = await response.json();
+  if (!data.content && data.error) throw new Error(data.error.message);
+  return data.content[0].text;
+}
+
+async function startProduction() {
+  if (isRunning) return;
+  const apiKey = document.getElementById('apiKey').value;
+  const theme = document.getElementById('themeInput').value.trim();
+  const wordCount = document.getElementById('wordCount').value;
+  const style = document.getElementById('articleStyle').value;
+  const errorMsg = document.getElementById('errorMsg');
+  errorMsg.className = 'error-msg';
+
+  if (!apiKey.startsWith('sk-ant')) {
+    errorMsg.textContent = '⚠ 有効なAnthropicのAPIキーを入力してください';
+    errorMsg.className = 'error-msg visible'; return;
+  }
+  if (!theme) {
+    errorMsg.textContent = '⚠ 記事テーマを入力してください';
+    errorMsg.className = 'error-msg visible'; return;
+  }
+
+  isRunning = true;
+  results = [];
+  document.getElementById('outputBlocks').innerHTML = '';
+  document.getElementById('outputSection').className = 'output-section';
+  document.getElementById('finalSection').className = 'final-section';
+
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.className = 'run-btn running';
+  btn.textContent = '⏳  14人チーム稼働中...';
+
+  const progressBar = document.getElementById('progressBar');
+  const progressFill = document.getElementById('progressFill');
+  progressBar.className = 'progress-bar visible';
+
+  MEMBERS.forEach((_, i) => setMemberStatus(i, 'standby'));
+
+  try {
+    for (let i = 0; i < MEMBERS.length; i++) {
+      setMemberStatus(i, 'active');
+      progressFill.style.width = `${(i / MEMBERS.length) * 100}%`;
+      const prompt = getPrompt(i, theme, wordCount, style, results);
+      const result = await callClaude(prompt, apiKey);
+      results.push(result);
+      showOutput(i, result);
+      setMemberStatus(i, 'done');
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    progressFill.style.width = '100%';
+    const finalText = results[13];
+    const finalSection = document.getElementById('finalSection');
+    finalSection.className = 'final-section visible';
+    document.getElementById('finalBody').textContent = finalText;
+    document.getElementById('charCount').textContent = `文字数: ${finalText.length}字`;
+    finalSection.scrollIntoView({ behavior: 'smooth' });
+
+  } catch(e) {
+    errorMsg.textContent = `⚠ エラー: ${e.message}`;
+    errorMsg.className = 'error-msg visible';
+  }
+
+  isRunning = false;
+  btn.disabled = false;
+  btn.className = 'run-btn';
+  btn.textContent = '▶  14人チーム起動 — 記事制作開始';
+}
+
+function copyArticle() {
+  const text = document.getElementById('finalBody').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'COPIED ✓';
+    setTimeout(() => btn.textContent = 'COPY', 2000);
+  });
+}
+</script>
+</body>
+</html>
