@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>バイト収支表</title>
+<style>
+  :root {
+    --bg:#f5f7f6;--card:#ffffff;--text:#1c2422;--dim:#64706c;--line:#e2e8e5;
+    --accent:#0f766e;--accent-soft:#e6f4f1;--on-accent:#ffffff;--plus:#0f766e;--minus:#c2410c;--warn:#b45309;--danger:#b91c1c;
+    --sat:#2563eb;--sun:#dc2626;--shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0f1413;--card:#181f1d;--text:#e6ece9;--dim:#94a39e;--line:#2a3431;
+      --accent:#2dd4bf;--accent-soft:#163330;--on-accent:#06201d;--plus:#2dd4bf;--minus:#fb923c;--warn:#fbbf24;--danger:#f87171;
+      --sat:#60a5fa;--sun:#f87171;--shadow:none;
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Hiragino Sans','Yu Gothic UI','Meiryo',system-ui,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%;}
+  .wrap{max-width:720px;margin:0 auto;padding:12px 16px calc(150px + env(safe-area-inset-bottom));}
+  header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
+  h1{font-size:18px;font-weight:800;}
+  .month{display:flex;align-items:center;gap:4px;}
+  .month span{font-weight:700;min-width:7.5em;text-align:center;font-variant-numeric:tabular-nums;}
+  button{font:inherit;color:inherit;cursor:pointer;border:none;background:none;}
+  .icon-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-size:14px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow);min-width:0;}
+  .stat .label{font-size:11px;color:var(--dim);}
+  .stat .value{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .plus{color:var(--plus);} .minus{color:var(--minus);}
+  .section-title{font-size:13px;font-weight:700;color:var(--dim);margin-bottom:8px;}
+
+  /* 次のシフト */
+  .next{display:flex;align-items:center;gap:12px;}
+  .next .bar-l{width:4px;align-self:stretch;border-radius:2px;}
+  .next .main{flex:1;min-width:0;}
+  .next .when{font-size:12px;color:var(--dim);}
+  .next .what{font-weight:700;}
+
+  /* カレンダー */
+  .cal-card{padding:8px 4px;}
+  .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));}
+  .dow{font-size:11px;text-align:center;color:var(--dim);padding:2px 0 6px;font-weight:600;}
+  .dow.sun,.cell.sun .d{color:var(--sun);} .dow.sat,.cell.sat .d{color:var(--sat);}
+  .cell{min-height:66px;border-top:1px solid var(--line);padding:3px 2px;cursor:pointer;min-width:0;}
+  .cell.blank{cursor:default;}
+  .cell:not(.blank):hover{background:var(--accent-soft);}
+  .cell .d{font-size:12px;font-weight:600;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;margin:0 auto 1px;}
+  .cell.today .d{background:var(--accent);color:var(--on-accent) !important;}
+  .chip{display:block;font-size:10px;line-height:1.35;border-radius:3px;padding:0 2px;margin-top:2px;white-space:nowrap;overflow:hidden;text-align:center;font-variant-numeric:tabular-nums;}
+  .more{font-size:10px;color:var(--dim);text-align:center;}
+
+  /* リスト */
+  .list{list-style:none;}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .row:last-child{border-bottom:none;}
+  .row .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .row .main{flex:1;min-width:0;}
+  .row .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .row .meta{font-size:12px;color:var(--dim);}
+  .row .amt{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .empty{text-align:center;color:var(--dim);padding:24px 8px;font-size:14px;}
+  .bd-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:4px 0;color:var(--dim);}
+  .bd-row b{color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+  /* 給料 */
+  .pay-total{text-align:center;padding:20px 16px;}
+  .pay-total .label{font-size:13px;color:var(--dim);}
+  .pay-total .big{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--plus);}
+  .pay-job-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .pay-job-head .dot{width:10px;height:10px;border-radius:50%;}
+  .pay-job-head b{flex:1;}
+  .pay-job-head .amt{font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;}
+  .wall-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden;}
+  .bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s;}
+  .bar.warn i{background:var(--warn);} .bar.over i{background:var(--danger);}
+  .note{font-size:12px;color:var(--dim);margin-top:6px;}
+
+  /* 下部ナビ・追加ボタン */
+  nav.bottom{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:5;}
+  nav.bottom .inner{display:flex;width:100%;max-width:720px;}
+  nav.bottom button{flex:1;padding:8px 0 10px;font-size:11px;font-weight:600;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:2px;}
+  nav.bottom button .ic{font-size:20px;line-height:1;filter:grayscale(1);opacity:.6;}
+  nav.bottom button.on{color:var(--accent);}
+  nav.bottom button.on .ic{filter:none;opacity:1;}
+  .fab{position:fixed;right:max(16px,calc(50% - 344px));bottom:calc(76px + env(safe-area-inset-bottom));height:52px;padding:0 22px;border-radius:26px;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,.2);z-index:4;}
+
+  .btn{padding:10px 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-weight:600;font-size:14px;}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+  .btn.danger{color:var(--danger);}
+  .btn.small{padding:6px 10px;font-size:13px;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* ダイアログ */
+  dialog{border:none;border-radius:16px;padding:0;width:min(440px,calc(100% - 32px));max-height:calc(100% - 32px);background:var(--card);color:var(--text);margin:auto;}
+  dialog::backdrop{background:rgba(0,0,0,.45);}
+  dialog form,.dialog-body{padding:20px;}
+  dialog h2{font-size:17px;margin-bottom:14px;}
+  .field{margin-bottom:12px;}
+  .field label,.flabel{display:block;font-size:12px;font-weight:600;color:var(--dim);margin-bottom:4px;}
+  .field input,.field select,.tpl-edit input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;font-size:16px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .check{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:12px;}
+  .check input{width:18px;height:18px;}
+  .preview{background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:14px;margin-bottom:14px;}
+  .preview b{font-variant-numeric:tabular-nums;}
+  .dialog-actions{display:flex;gap:8px;justify-content:flex-end;}
+  .dialog-actions .left{margin-right:auto;}
+  .help{font-size:12px;color:var(--dim);margin-top:4px;}
+  .tpls{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .tpl{border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:13px;background:var(--bg);display:inline-flex;align-items:center;gap:6px;}
+  .tpl .sw{width:8px;height:8px;border-radius:50%;}
+  .tpl-edit{display:grid;grid-template-columns:1.2fr 1fr 1fr .8fr auto;gap:6px;align-items:center;margin-bottom:6px;}
+  .tpl-edit input{padding:8px 6px;font-size:14px;}
+  .tpl-edit button{color:var(--danger);font-size:18px;padding:0 4px;}
+  .cell.hol .d{color:var(--sun);}
+  .hol-name{font-size:12px;color:var(--sun);font-weight:600;margin:-8px 0 10px;}
+
+  /* グラフ */
+  .chart-wrap{position:relative;}
+  .chart-wrap svg{display:block;width:100%;overflow:visible;}
+  .chart-wrap .grid{stroke:var(--line);stroke-width:1;}
+  .chart-wrap .axis{fill:var(--dim);font-size:10px;font-variant-numeric:tabular-nums;}
+  .chart-wrap .axis.on{fill:var(--text);font-weight:700;}
+  .chart-wrap .hit{fill:transparent;cursor:pointer;}
+  .chart-wrap .hit:hover,.chart-wrap .hit.on{fill:var(--accent-soft);}
+  .legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--dim);margin-top:8px;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+  .tip{position:absolute;pointer-events:none;background:var(--text);color:var(--bg);border-radius:8px;padding:6px 10px;font-size:12px;line-height:1.5;white-space:nowrap;transform:translate(-50%,-100%);z-index:2;}
+  .tip b{font-variant-numeric:tabular-nums;}
+  details.table{margin-top:10px;font-size:13px;}
+  details.table summary{cursor:pointer;color:var(--dim);}
+  details.table table{width:100%;border-collapse:collapse;margin-top:6px;}
+  details.table th,details.table td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;}
+  details.table th:first-child,details.table td:first-child{text-align:left;}
+
+  .banner{position:fixed;left:50%;top:12px;transform:translateX(-50%);width:min(440px,calc(100% - 32px));background:var(--text);color:var(--bg);border-radius:12px;padding:12px 16px;font-size:14px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="pageTitle">シフト</h1>
+    <div class="month" id="monthNav">
+      <button class="icon-btn" id="prevMonth" aria-label="前の月">◀</button>
+      <span id="monthLabel"></span>
+      <button class="icon-btn" id="nextMonth" aria-label="次の月">▶</button>
+    </div>
+  </header>
+
+  <!-- カレンダー -->
+  <section id="tab-calendar">
+    <div class="card next hidden" id="nextShift"></div>
+    <div class="card cal-card"><div class="cal" id="cal"></div></div>
+    <div class="stats">
+      <div class="stat"><div class="label">今月の勤務分</div><div class="value plus" id="cPay">¥0</div></div>
+      <div class="stat"><div class="label">勤務時間</div><div class="value" id="cHours">0h</div></div>
+      <div class="stat"><div class="label">出勤</div><div class="value" id="cCount">0回</div></div>
+    </div>
+    <div class="card"><div class="section-title">この月のシフト</div><ul class="list" id="shiftList"></ul></div>
+  </section>
+
+  <!-- 給料 -->
+  <section id="tab-salary" class="hidden">
+    <div class="card pay-total">
+      <div class="label" id="payTotalLabel"></div>
+      <div class="big" id="payTotal">¥0</div>
+      <div class="note" id="payTotalNote"></div>
+    </div>
+    <div id="payJobs"></div>
+    <div class="card">
+      <div class="section-title" id="chartTitle">月別の振込額</div>
+      <div class="chart-wrap" id="chart"></div>
+      <div class="legend" id="chartLegend"></div>
+      <details class="table"><summary>表で見る</summary><div id="chartTable"></div></details>
+    </div>
+    <div class="card">
+      <div class="wall-head"><b id="wallTitle"></b><span id="wallText"></span></div>
+      <div class="bar" id="wallBar"><i style="width:0"></i></div>
+      <div class="note" id="wallNote"></div>
+    </div>
+  </section>
+
+  <!-- 支出 -->
+  <section id="tab-expenses" class="hidden">
+    <div class="stats">
+      <div class="stat"><div class="label">今月の振込</div><div class="value plus" id="eIn">¥0</div></div>
+      <div class="stat"><div class="label">支出</div><div class="value minus" id="eOut">¥0</div></div>
+      <div class="stat"><div class="label">残り</div><div class="value" id="eBal">¥0</div></div>
+    </div>
+    <div class="card">
+      <ul class="list" id="expenseList"></ul>
+      <div id="catBreakdown"></div>
+    </div>
+  </section>
+
+  <!-- 設定 -->
+  <section id="tab-settings" class="hidden">
+    <div class="card">
+      <div class="section-title">バイト先</div>
+      <ul class="list" id="jobList"></ul>
+    </div>
+    <div class="card">
+      <div class="section-title">年収の壁</div>
+      <div class="field">
+        <label for="wallSelect">目安にする上限</label>
+        <select id="wallSelect">
+          <option value="1230000">123万円（所得税がかからない上限）</option>
+          <option value="1500000">150万円（19〜22歳の学生：親の扶養控除が満額）</option>
+          <option value="1060000">106万円（社会保険の加入目安）</option>
+          <option value="1300000">130万円（社会保険の扶養上限）</option>
+          <option value="custom">自分で入力</option>
+        </select>
+      </div>
+      <div class="field hidden" id="wallCustomField">
+        <label for="wallCustom">上限（円）</label>
+        <input type="number" id="wallCustom" inputmode="numeric" min="0" step="10000">
+      </div>
+      <p class="help">年収は給料日（振り込まれる日）の年で数えます。交通費（非課税）は含めていません。制度は変わることがあるので、最終的には勤務先や税務署で確認してください。</p>
+    </div>
+    <div class="card">
+      <div class="section-title">シフトのお知らせ</div>
+      <div class="field">
+        <label for="remindSelect">いつ知らせる？</label>
+        <select id="remindSelect">
+          <option value="0">知らせない</option>
+          <option value="30">30分前</option>
+          <option value="60">1時間前</option>
+          <option value="120">2時間前</option>
+          <option value="eve">前日の21時</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="notifyPerm">通知を許可する</button>
+        <button class="btn" id="exportIcs">カレンダーアプリに追加（.ics）</button>
+      </div>
+      <p class="help" id="notifyHelp">このページを開いている間はブラウザの通知でお知らせします。アプリを閉じていても確実に知らせてほしいときは「カレンダーアプリに追加」を使うと、スマホのカレンダーのアラームで通知されます（今日以降のシフトが対象。シフトを増やしたら再度追加してください）。</p>
+    </div>
+    <div class="card">
+      <div class="section-title">データ</div>
+      <div class="btn-row">
+        <button class="btn" id="exportCsv">CSVで書き出し</button>
+        <button class="btn" id="exportJson">バックアップ保存</button>
+        <button class="btn" id="importJson">バックアップから復元</button>
+        <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+      </div>
+      <p class="help">データはこのブラウザの中だけに保存されます。機種変更やブラウザのデータ削除の前にバックアップしてください。</p>
+    </div>
+  </section>
+</div>
+
+<button class="fab" id="fab">＋ シフト</button>
+
+<nav class="bottom"><div class="inner">
+  <button class="on" data-tab="calendar"><span class="ic">📅</span>シフト</button>
+  <button data-tab="salary"><span class="ic">💴</span>給料</button>
+  <button data-tab="expenses"><span class="ic">🧾</span>支出</button>
+  <button data-tab="settings"><span class="ic">⚙️</span>設定</button>
+</div></nav>
+
+<!-- 日付をタップしたとき -->
+<dialog id="dayDialog">
+  <div class="dialog-body">
+    <h2 id="dayTitle"></h2>
+    <ul class="list" id="dayShifts"></ul>
+    <div class="flabel" id="dayTplLabel" style="margin-top:12px">テンプレートでワンタップ登録</div>
+    <div class="tpls" id="dayTpls"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn left" id="dayExpense">＋ 支出</button>
+      <button type="button" class="btn" data-close>閉じる</button>
+      <button type="button" class="btn primary" id="dayAdd">＋ シフト</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="shiftDialog">
+  <form method="dialog" id="shiftForm">
+    <h2 id="shiftDialogTitle">シフトを追加</h2>
+    <div class="field">
+      <label for="shJob">バイト先</label>
+      <select id="shJob" required></select>
+    </div>
+    <div class="tpls" id="shTpls"></div>
+    <div class="field">
+      <label for="shDate">日付</label>
+      <input type="date" id="shDate" required>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="shStart">開始</label><input type="time" id="shStart" required></div>
+      <div class="field"><label for="shEnd">終了</label><input type="time" id="shEnd" required></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="shBreak">休憩（分）</label><input type="number" id="shBreak" inputmode="numeric" min="0" step="5" value="0"></div>
+      <div class="field"><label for="shTransport">交通費（円）</label><input type="number" id="shTransport" inputmode="numeric" min="0" value="0"></div>
+    </div>
+    <p class="help" style="margin:-6px 0 12px">休憩は22時より前（通常の時間帯）に取った扱いで計算します。</p>
+    <div class="field"><label for="shMemo">メモ</label><input type="text" id="shMemo" maxlength="60"></div>
+    <div class="preview" id="shPreview"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn danger left hidden" id="shDelete">削除</button>
+      <button type="button" class="btn" data-close>キャンセル</button>
+      <button type="submit" class="btn primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="expenseDialog">
+  <form method="dialog" id="expenseForm">
+    <h2 id="expenseDialogTitle">支出を追加</h2>
+    <div class="field"><label for="exDate">日付</label><input type="date" id="exDate" required></div>
+    <div class="grid2">
+      <div class="field">
+        <label for="exCat">カテゴリ</label>
+        <select id="exCat"></select>
+      </div>
+      <div class="field"><label for="exAmount">金額（円）</label><input type="number" id="exAmount" inputmode="numeric" min="1" required></div>
+    </div>
+    <div class="field"><label for="exMemo">メモ</label><input type="text" id="exMemo" maxlength="60"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn danger left hidden" id="exDelete">削除</button>
+      <button type="button" class="btn" data-close>キャンセル</button>
+      <button type="submit" class="btn primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="jobDialog">
+  <form method="dialog" id="jobForm">
+    <h2 id="jobDialogTitle">バイト先を追加</h2>
+    <div class="field"><label for="jbName">名前</label><input type="text" id="jbName" maxlength="30" required placeholder="例：カフェ、塾講師"></div>
+    <div class="grid2">
+      <div class="field"><label for="jbWage">時給（円）</label><input type="number" id="jbWage" inputmode="numeric" min="1" required></div>
+      <div class="field"><label for="jbTransport">交通費（1回）</label><input type="number" id="jbTransport" inputmode="numeric" min="0" value="0"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="jbClose">締め日</label><select id="jbClose"></select></div>
+      <div class="field"><label for="jbColor">色</label><input type="color" id="jbColor" value="#0f766e" style="height:46px;padding:4px"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="jbPayMonth">給料日</label>
+        <select id="jbPayMonth"><option value="0">当月</option><option value="1">翌月</option><option value="2">翌々月</option></select></div>
+      <div class="field"><label for="jbPayDay">&nbsp;</label><select id="jbPayDay"></select></div>
+    </div>
+    <label class="check"><input type="checkbox" id="jbNight" checked> 22時〜5時は深夜手当（時給×1.25）</label>
+    <div class="flabel">シフトのテンプレート（早番・遅番など）</div>
+    <div id="tplEditor"></div>
+    <button type="button" class="btn small" id="tplAdd" style="margin-bottom:8px">＋ テンプレートを追加</button>
+    <p class="help">時給を変えても、すでに記録したシフトの給料は変わりません。</p>
+    <div class="dialog-actions" style="margin-top:12px">
+      <button type="button" class="btn danger left hidden" id="jbDelete">削除</button>
+      <button type="button" class="btn" data-close>キャンセル</button>
+      <button type="submit" class="btn primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  const KEY = 'baito-shushi-v1';
+  const CATEGORIES = ['食費','交通','娯楽','日用品','服・美容','通信','学業','その他'];
+  const COLORS = ['#0d9488','#2563eb','#c2410c','#7c3aed','#db2777','#4d7c0f'];
+  const WEEK = ['日','月','火','水','木','金','土'];
+
+  // ---------- 祝日（内閣府の祝日法ルールで計算。2020年以降に対応） ----------
+  const holidayCache = {};
+  function holidaysOf(y) {
+    if (holidayCache[y]) return holidayCache[y];
+    const h = {};
+    const key = (m, d) => `${y}-${pad(m)}-${pad(d)}`;
+    const nthMonday = (m, n) => { const first = new Date(y, m - 1, 1).getDay(); return 1 + ((8 - first) % 7) + (n - 1) * 7; };
+    const shift = Math.floor((y - 1980) / 4);
+    const add = (m, d, name) => h[key(m, d)] = name;
+    add(1, 1, '元日'); add(1, nthMonday(1, 2), '成人の日'); add(2, 11, '建国記念の日'); add(2, 23, '天皇誕生日');
+    add(3, Math.floor(20.8431 + 0.242194 * (y - 1980) - shift), '春分の日');
+    add(4, 29, '昭和の日'); add(5, 3, '憲法記念日'); add(5, 4, 'みどりの日'); add(5, 5, 'こどもの日');
+    add(7, nthMonday(7, 3), '海の日'); add(8, 11, '山の日'); add(9, nthMonday(9, 3), '敬老の日');
+    add(9, Math.floor(23.2488 + 0.242194 * (y - 1980) - shift), '秋分の日');
+    add(10, nthMonday(10, 2), 'スポーツの日'); add(11, 3, '文化の日'); add(11, 23, '勤労感謝の日');
+    const ds = d => ymd(d);
+    // 国民の休日：祝日にはさまれた平日
+    Object.keys(h).forEach(k => {
+      const d = new Date(k + 'T00:00'); d.setDate(d.getDate() + 2);
+      if (h[ds(d)]) { const mid = new Date(k + 'T00:00'); mid.setDate(mid.getDate() + 1); if (!h[ds(mid)] && mid.getDay() !== 0) h[ds(mid)] = '国民の休日'; }
+    });
+    // 振替休日：日曜の祝日の後の最初の平日
+    Object.keys(h).sort().forEach(k => {
+      const d = new Date(k + 'T00:00');
+      if (d.getDay() !== 0) return;
+      do d.setDate(d.getDate() + 1); while (h[ds(d)]);
+      h[ds(d)] = '振替休日';
+    });
+    return holidayCache[y] = h;
+  }
+  const holidayName = date => holidaysOf(Number(date.slice(0, 4)))[date];
+
+  const $ = id => document.getElementById(id);
+  const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const pad = n => String(n).padStart(2, '0');
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const daysIn = (y, m0) => new Date(y, m0 + 1, 0).getDate();
+  const norm = (y, m0) => { const d = new Date(y, m0, 1); return [d.getFullYear(), d.getMonth()]; };
+  const parse = s => s.split('-').map(Number);
+  const dayLabel = s => { const d = new Date(s + 'T00:00'); return `${d.getMonth() + 1}/${d.getDate()}(${WEEK[d.getDay()]})`; };
+  const hm = min => `${Math.floor(min / 60)}h${min % 60 ? pad(min % 60) : ''}`;
+  // 背景色に応じて読みやすい文字色を返す
+  const ink = hex => {
+    const n = parseInt(String(hex).slice(1), 16);
+    const [r, g, b] = [n >> 16 & 255, n >> 8 & 255, n & 255];
+    return (r * 299 + g * 587 + b * 114) / 1000 > 160 ? '#111' : '#fff';
+  };
+
+  // ---------- データ ----------
+  const fixJob = j => ({ closeDay: 0, payMonth: 1, payDay: 25, templates: [], transport: 0, ...j });
+  function normalize(d) {
+    return {
+      jobs: (d.jobs || []).map(fixJob), shifts: d.shifts || [], expenses: d.expenses || [],
+      settings: { wall: 1230000, ...(d.settings || {}) },
+    };
+  }
+  function load() {
+    try {
+      const d = JSON.parse(localStorage.getItem(KEY));
+      if (d && Array.isArray(d.jobs)) return normalize(d);
+    } catch (e) {}
+    return normalize({});
+  }
+  let data = load();
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { alert('保存できませんでした。ブラウザの設定を確認してください。'); }
+  }
+
+  // ---------- 給料計算 ----------
+  const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  // 開始〜終了（日をまたぐ場合も）のうち、22:00〜翌5:00 にあたる分数
+  function nightMinutes(start, end) {
+    let n = 0;
+    for (let m = start; m < end; m++) {
+      const t = m % 1440;
+      if (t >= 1320 || t < 300) n++;
+    }
+    return n;
+  }
+  function calcShift(s) {
+    const start = toMin(s.start);
+    let end = toMin(s.end);
+    if (end <= start) end += 1440;
+    const total = end - start;
+    const brk = Math.min(Math.max(0, Number(s.breakMin) || 0), total);
+    // 休憩は深夜（22時）より前の通常時間に取った扱いにする。通常時間が足りない分だけ深夜から差し引く
+    let night = s.night ? nightMinutes(start, end) : 0;
+    let normal = total - night - brk;
+    if (normal < 0) { night += normal; normal = 0; }
+    const work = normal + night;
+    const pay = Math.floor(s.wage * normal / 60 + s.wage * 1.25 * night / 60);
+    return { work, night, pay };
+  }
+
+  // ---------- 締め日・給料日 ----------
+  // closeDay: 0 = 末日、1〜28 = その日に締め
+  function closingMonthOf(job, date) {
+    const [y, m, d] = parse(date);
+    return (job.closeDay === 0 || d <= job.closeDay) ? [y, m - 1] : norm(y, m);
+  }
+  function periodOf(job, y, m0) {
+    if (job.closeDay === 0) return [`${y}-${pad(m0 + 1)}-01`, `${y}-${pad(m0 + 1)}-${pad(daysIn(y, m0))}`];
+    const [py, pm] = norm(y, m0 - 1);
+    return [`${py}-${pad(pm + 1)}-${pad(job.closeDay + 1)}`, `${y}-${pad(m0 + 1)}-${pad(job.closeDay)}`];
+  }
+  function payDateOf(job, cy, cm) {
+    const [y, m] = norm(cy, cm + job.payMonth);
+    const d = job.payDay === 0 ? daysIn(y, m) : Math.min(job.payDay, daysIn(y, m));
+    return new Date(y, m, d);
+  }
+  const payDateOfShift = s => { const j = jobOf(s.jobId); return j ? payDateOf(j, ...closingMonthOf(j, s.date)) : new Date(s.date + 'T00:00'); };
+  // 指定月（y, m0）に振り込まれる給料をバイト先ごとに集計
+  function salaryForMonth(y, m0) {
+    return data.jobs.map(j => {
+      const [cy, cm] = norm(y, m0 - j.payMonth);
+      const [from, to] = periodOf(j, cy, cm);
+      const shifts = data.shifts.filter(s => s.jobId === j.id && s.date >= from && s.date <= to);
+      const sum = { job: j, from, to, payDate: payDateOf(j, cy, cm), pay: 0, transport: 0, work: 0, night: 0, n: shifts.length };
+      shifts.forEach(s => { const c = calcShift(s); sum.pay += c.pay; sum.work += c.work; sum.night += c.night; sum.transport += Number(s.transport) || 0; });
+      return sum;
+    });
+  }
+
+  // ---------- 状態 ----------
+  const now = new Date();
+  const today = ymd(now);
+  let viewY = now.getFullYear(), viewM = now.getMonth();
+  let tab = 'calendar';
+  const inMonth = s => { const [y, m] = parse(s); return y === viewY && m === viewM + 1; };
+  const jobOf = id => data.jobs.find(j => j.id === id);
+  const sortShifts = a => a.sort((x, y) => (x.date + x.start).localeCompare(y.date + y.start));
+
+  // ---------- 描画 ----------
+  function render() {
+    const titles = { calendar: 'シフト', salary: '給料', expenses: '支出', settings: '設定' };
+    $('pageTitle').textContent = titles[tab];
+    $('monthLabel').textContent = `${viewY}年${viewM + 1}月`;
+    $('monthNav').classList.toggle('hidden', tab === 'settings');
+    ['calendar', 'salary', 'expenses', 'settings'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== tab));
+    document.querySelectorAll('nav.bottom button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+    const fab = $('fab');
+    fab.classList.toggle('hidden', tab === 'salary' || tab === 'settings');
+    fab.textContent = tab === 'expenses' ? '＋ 支出' : '＋ シフト';
+
+    if (tab === 'calendar') renderCalendar();
+    if (tab === 'salary') renderSalary();
+    if (tab === 'expenses') renderExpenses();
+    if (tab === 'settings') renderSettings();
+  }
+
+  function shiftRow(s, withDate = true) {
+    const j = jobOf(s.jobId), c = calcShift(s);
+    return `<li class="row" data-shift="${s.id}">
+      <span class="dot" style="background:${esc(j ? j.color : '#999')}"></span>
+      <div class="main"><div class="title">${withDate ? dayLabel(s.date) + ' ' : ''}${esc(j ? j.name : '（削除済み）')}</div>
+      <div class="meta">${s.start}〜${s.end}・${hm(c.work)}${c.night ? '（深夜' + c.night + '分）' : ''}${s.memo ? '・' + esc(s.memo) : ''}</div></div>
+      <span class="amt plus">${yen(c.pay)}</span></li>`;
+  }
+
+  function renderCalendar() {
+    // 次のシフト
+    const nowHM = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const next = sortShifts(data.shifts.filter(s => s.date > today || (s.date === today && s.end > nowHM)))[0];
+    const nextEl = $('nextShift');
+    nextEl.classList.toggle('hidden', !next);
+    if (next) {
+      const j = jobOf(next.jobId);
+      const diff = Math.round((new Date(next.date + 'T00:00') - new Date(today + 'T00:00')) / 864e5);
+      const when = diff === 0 ? '今日' : diff === 1 ? '明日' : `${diff}日後`;
+      nextEl.innerHTML = `<span class="bar-l" style="background:${esc(j ? j.color : '#999')}"></span>
+        <div class="main"><div class="when">次のシフト・${when}</div><div class="what">${dayLabel(next.date)} ${next.start}〜${next.end}　${esc(j ? j.name : '')}</div></div>
+        <span class="amt plus" style="font-weight:700">${yen(calcShift(next).pay)}</span>`;
+      nextEl.dataset.shift = next.id;
+    }
+
+    // カレンダー
+    const byDate = {};
+    data.shifts.filter(s => inMonth(s.date)).forEach(s => (byDate[s.date] = byDate[s.date] || []).push(s));
+    const first = new Date(viewY, viewM, 1).getDay();
+    let html = WEEK.map((w, i) => `<div class="dow${i === 0 ? ' sun' : i === 6 ? ' sat' : ''}">${w}</div>`).join('');
+    for (let i = 0; i < first; i++) html += '<div class="cell blank"></div>';
+    for (let d = 1; d <= daysIn(viewY, viewM); d++) {
+      const date = `${viewY}-${pad(viewM + 1)}-${pad(d)}`;
+      const dow = (first + d - 1) % 7;
+      const list = sortShifts(byDate[date] || []);
+      const chips = list.slice(0, 2).map(s => {
+        const j = jobOf(s.jobId), col = j ? j.color : '#999';
+        return `<span class="chip" style="background:${esc(col)};color:${ink(col)}">${s.start}</span>`;
+      }).join('') + (list.length > 2 ? `<div class="more">+${list.length - 2}</div>` : '');
+      const hol = holidayName(date);
+      html += `<div class="cell${dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''}${hol ? ' hol' : ''}${date === today ? ' today' : ''}" data-date="${date}"${hol ? ` title="${hol}"` : ''}><div class="d">${d}</div>${chips}</div>`;
+    }
+    $('cal').innerHTML = html;
+
+    // 集計と一覧
+    const shifts = sortShifts(data.shifts.filter(s => inMonth(s.date)));
+    let pay = 0, work = 0;
+    shifts.forEach(s => { const c = calcShift(s); pay += c.pay; work += c.work; });
+    $('cPay').textContent = yen(pay);
+    $('cHours').textContent = hm(work);
+    $('cCount').textContent = `${shifts.length}回`;
+    $('shiftList').innerHTML = shifts.length ? shifts.map(s => shiftRow(s)).join('')
+      : `<li class="empty">${data.jobs.length ? 'カレンダーの日付をタップしてシフトを追加しましょう。' : 'まずは「設定」でバイト先と時給を登録しましょう。'}</li>`;
+  }
+
+  // ---------- 月別グラフ（給料日ベース・バイト先で積み上げ） ----------
+  const compact = n => n === 0 ? '0' : n >= 10000 ? `${+(n / 10000).toFixed(1)}万` : `${+(n / 1000).toFixed(1)}千`;
+  function niceStep(max) {
+    const raw = max / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    return [1, 2, 2.5, 5, 10].map(f => f * mag).find(s => s >= raw);
+  }
+  // 上だけ角丸の長方形
+  const roundTop = (x, y, w, h, r) => {
+    r = Math.min(r, h, w / 2);
+    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  };
+  function renderChart() {
+    const months = Array.from({ length: 12 }, (_, m) => {
+      const rows = salaryForMonth(viewY, m).map(r => ({ job: r.job, v: r.pay + r.transport })).filter(r => r.v > 0);
+      return { m, rows, total: rows.reduce((a, r) => a + r.v, 0) };
+    });
+    const max = Math.max(...months.map(x => x.total));
+    const el = $('chart');
+    $('chartTitle').textContent = `${viewY}年 月別の振込額（交通費込み）`;
+    const W = Math.max(280, el.clientWidth || 320), H = 180, L = 34, B = 20, T = 8;
+    const pw = W - L, ph = H - B - T;
+    const step = max ? niceStep(max) : 10000, top = max ? Math.ceil(max / step) * step : step * 4;
+    const y = v => T + ph - v / top * ph;
+    let svg = '';
+    for (let v = 0; v <= top + 1; v += step)
+      svg += `<line class="grid" x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${compact(v)}</text>`;
+    const slot = pw / 12, bw = Math.min(24, slot * 0.6);
+    months.forEach(({ m, rows }) => {
+      const cx = L + slot * m + slot / 2, x = cx - bw / 2;
+      svg += `<rect class="hit${m === viewM ? ' on' : ''}" data-m="${m}" x="${L + slot * m}" y="${T}" width="${slot}" height="${ph}" rx="4"/>`;
+      let base = 0;
+      rows.forEach((r, i) => {
+        const y0 = y(base), y1 = y(base + r.v);
+        const gap = i > 0 ? 2 : 0, h = Math.max(0, y0 - y1 - gap);
+        const d = i === rows.length - 1 ? roundTop(x, y1, bw, h, 4) : `M${x},${y1}h${bw}v${h}h${-bw}Z`;
+        if (h > 0) svg += `<path d="${d}" fill="${esc(r.job.color)}" pointer-events="none"/>`;
+        base += r.v;
+      });
+      svg += `<text class="axis${m === viewM ? ' on' : ''}" x="${cx}" y="${H - 5}" text-anchor="middle">${m + 1}</text>`;
+    });
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${viewY}年の月別振込額">${svg}</svg><div class="tip hidden" id="chartTip"></div>`;
+
+    const jobsInYear = data.jobs.filter(j => months.some(x => x.rows.some(r => r.job === j)));
+    $('chartLegend').innerHTML = jobsInYear.length > 1 ? jobsInYear.map(j => `<span><i style="background:${esc(j.color)}"></i>${esc(j.name)}</span>`).join('') : '';
+    $('chartTable').innerHTML = `<table><tr><th>月</th>${data.jobs.map(j => `<th>${esc(j.name)}</th>`).join('')}<th>合計</th></tr>`
+      + months.map(x => `<tr><td>${x.m + 1}月</td>${data.jobs.map(j => { const r = x.rows.find(r => r.job === j); return `<td>${r ? yen(r.v) : '−'}</td>`; }).join('')}<td><b>${yen(x.total)}</b></td></tr>`).join('')
+      + `<tr><td><b>合計</b></td>${data.jobs.map(j => `<td>${yen(months.reduce((a, x) => a + (x.rows.find(r => r.job === j)?.v || 0), 0))}</td>`).join('')}<td><b>${yen(months.reduce((a, x) => a + x.total, 0))}</b></td></tr></table>`;
+
+    const tip = $('chartTip');
+    const show = e => {
+      const hit = e.target.closest('.hit'); if (!hit) return tip.classList.add('hidden');
+      const x = months[hit.dataset.m];
+      tip.innerHTML = `<b>${x.m + 1}月 ${yen(x.total)}</b>` + (x.rows.length > 1 ? x.rows.map(r => `<br>${esc(r.job.name)} ${yen(r.v)}`).join('') : '');
+      const scale = el.clientWidth / W;
+      tip.style.left = Math.min(Math.max((L + slot * x.m + slot / 2) * scale, 60), el.clientWidth - 60) + 'px';
+      tip.style.top = Math.max(y(x.total) * scale - 6, 0) + 'px';
+      tip.classList.remove('hidden');
+    };
+    el.onmousemove = show;
+    el.onmouseleave = () => tip.classList.add('hidden');
+    el.onclick = e => { const hit = e.target.closest('.hit'); if (hit) { viewM = Number(hit.dataset.m); render(); } };
+  }
+
+  function renderSalary() {
+    renderChart();
+    const rows = salaryForMonth(viewY, viewM);
+    const total = rows.reduce((a, r) => a + r.pay + r.transport, 0);
+    const isPast = new Date(viewY, viewM + 1, 0) < new Date(today + 'T00:00');
+    $('payTotalLabel').textContent = `${viewM + 1}月の振込${isPast ? '額' : '予定'}（交通費込み）`;
+    $('payTotal').textContent = yen(total);
+    $('payTotalNote').textContent = data.jobs.length ? '' : '「設定」でバイト先を登録すると、給料日ごとに集計されます。';
+
+    $('payJobs').innerHTML = rows.map(r => {
+      const pd = r.payDate, paid = pd < new Date(today + 'T00:00');
+      return `<div class="card">
+        <div class="pay-job-head"><span class="dot" style="background:${esc(r.job.color)}"></span><b>${esc(r.job.name)}</b><span class="amt">${yen(r.pay + r.transport)}</span></div>
+        <div class="bd-row"><span>${paid ? '振込日' : '振込予定日'}</span><b>${pd.getMonth() + 1}/${pd.getDate()}(${WEEK[pd.getDay()]})</b></div>
+        <div class="bd-row"><span>対象期間</span><b>${dayLabel(r.from)}〜${dayLabel(r.to)}</b></div>
+        <div class="bd-row"><span>出勤・勤務時間</span><b>${r.n}回・${hm(r.work)}${r.night ? `（深夜 ${hm(r.night)}）` : ''}</b></div>
+        <div class="bd-row"><span>給料</span><b>${yen(r.pay)}</b></div>
+        <div class="bd-row"><span>交通費</span><b>${yen(r.transport)}</b></div>
+      </div>`;
+    }).join('');
+
+    // 年収の壁（給料日の年で数える）
+    const wall = Number(data.settings.wall) || 0;
+    const year = data.shifts.filter(s => payDateOfShift(s).getFullYear() === viewY).reduce((a, s) => a + calcShift(s).pay, 0);
+    const rate = wall ? year / wall : 0;
+    $('wallTitle').textContent = `${viewY}年の年収見込み`;
+    $('wallText').innerHTML = `<b>${yen(year)}</b> / ${yen(wall)}`;
+    const bar = $('wallBar');
+    bar.className = 'bar' + (rate >= 1 ? ' over' : rate >= 0.85 ? ' warn' : '');
+    bar.firstElementChild.style.width = Math.min(100, rate * 100) + '%';
+    const left = wall - year;
+    let note;
+    if (left < 0) note = `上限を ${yen(-left)} 超えています。`;
+    else {
+      const monthsLeft = viewY === now.getFullYear() ? 12 - now.getMonth() : viewY > now.getFullYear() ? 12 : 0;
+      note = `あと ${yen(left)}` + (monthsLeft ? `（1か月あたり約 ${yen(left / monthsLeft)} まで）` : '');
+    }
+    $('wallNote').textContent = note + ' ※登録済みのシフトから計算しています。';
+  }
+
+  function renderExpenses() {
+    const income = salaryForMonth(viewY, viewM).reduce((a, r) => a + r.pay + r.transport, 0);
+    const expenses = data.expenses.filter(e => inMonth(e.date)).sort((a, b) => b.date.localeCompare(a.date));
+    const out = expenses.reduce((a, e) => a + Number(e.amount), 0);
+    const bal = income - out;
+    $('eIn').textContent = yen(income);
+    $('eOut').textContent = yen(out);
+    $('eBal').textContent = (bal < 0 ? '−' : '') + yen(Math.abs(bal));
+    $('eBal').className = 'value ' + (bal < 0 ? 'minus' : 'plus');
+    $('expenseList').innerHTML = expenses.length ? expenses.map(e => `<li class="row" data-expense="${e.id}">
+        <div class="main"><div class="title">${esc(e.category)}${e.memo ? '・' + esc(e.memo) : ''}</div><div class="meta">${dayLabel(e.date)}</div></div>
+        <span class="amt minus">${yen(e.amount)}</span></li>`).join('')
+      : '<li class="empty">この月の支出はまだありません。</li>';
+    const byCat = {};
+    expenses.forEach(e => byCat[e.category] = (byCat[e.category] || 0) + Number(e.amount));
+    $('catBreakdown').innerHTML = Object.entries(byCat).sort((a, b) => b[1] - a[1])
+      .map(([k, v]) => `<div class="bd-row"><span>${esc(k)}</span><b>${yen(v)}</b></div>`).join('');
+  }
+
+  const closeLabel = j => j.closeDay === 0 ? '末日締め' : `${j.closeDay}日締め`;
+  const payLabel = j => `${['当月', '翌月', '翌々月'][j.payMonth]}${j.payDay === 0 ? '末日' : j.payDay + '日'}払い`;
+  function renderSettings() {
+    $('jobList').innerHTML = data.jobs.map(j => `<li class="row" data-job="${j.id}">
+        <span class="dot" style="background:${esc(j.color)}"></span>
+        <div class="main"><div class="title">${esc(j.name)}</div><div class="meta">時給 ${yen(j.wage)}・${closeLabel(j)}${payLabel(j)}${j.templates.length ? `・テンプレ${j.templates.length}件` : ''}</div></div>
+        <span class="meta">編集 ›</span></li>`).join('')
+      + '<li class="row" id="addJobRow"><div class="main"><div class="title" style="color:var(--accent)">＋ バイト先を追加</div></div></li>';
+  }
+
+  // ---------- 画面切り替え ----------
+  document.querySelectorAll('nav.bottom button').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; render(); window.scrollTo(0, 0); }));
+  $('prevMonth').onclick = () => { [viewY, viewM] = norm(viewY, viewM - 1); render(); };
+  $('nextMonth').onclick = () => { [viewY, viewM] = norm(viewY, viewM + 1); render(); };
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+  const defaultDate = () => (viewY === now.getFullYear() && viewM === now.getMonth()) ? today : `${viewY}-${pad(viewM + 1)}-01`;
+
+  // ---------- 日付の詳細 ----------
+  let dayDate = null;
+  function openDay(date) {
+    dayDate = date;
+    const hol = holidayName(date);
+    $('dayTitle').innerHTML = dayLabel(date) + (hol ? `<div class="hol-name" style="margin:2px 0 0">${hol}</div>` : '');
+    const list = sortShifts(data.shifts.filter(s => s.date === date));
+    $('dayShifts').innerHTML = list.length ? list.map(s => shiftRow(s, false)).join('') : '<li class="empty" style="padding:8px">シフトはありません</li>';
+    const tpls = data.jobs.flatMap(j => j.templates.map((t, i) => ({ j, t, i })));
+    $('dayTplLabel').classList.toggle('hidden', !tpls.length);
+    $('dayTpls').innerHTML = tpls.map(({ j, t, i }) =>
+      `<button type="button" class="tpl" data-job="${j.id}" data-i="${i}"><span class="sw" style="background:${esc(j.color)}"></span>${esc(j.name)} ${esc(t.name)} ${t.start}〜${t.end}</button>`).join('');
+    if (!$('dayDialog').open) $('dayDialog').showModal();
+  }
+  $('cal').addEventListener('click', e => { const c = e.target.closest('[data-date]'); if (c) openDay(c.dataset.date); });
+  $('dayTpls').addEventListener('click', e => {
+    const b = e.target.closest('[data-job]'); if (!b) return;
+    const j = jobOf(b.dataset.job), t = j.templates[b.dataset.i];
+    data.shifts.push({ id: uid(), jobId: j.id, date: dayDate, start: t.start, end: t.end, breakMin: t.breakMin, transport: j.transport, memo: '', wage: j.wage, night: !!j.night });
+    save(); render(); openDay(dayDate);
+  });
+  $('dayShifts').addEventListener('click', e => {
+    const li = e.target.closest('[data-shift]');
+    if (li) { $('dayDialog').close(); openShift(data.shifts.find(s => s.id === li.dataset.shift)); }
+  });
+  $('dayAdd').onclick = () => { $('dayDialog').close(); openShift(null, dayDate); };
+  $('dayExpense').onclick = () => { $('dayDialog').close(); openExpense(null, dayDate); };
+
+  // ---------- シフト ----------
+  let editingShift = null;
+  function openShift(s, date) {
+    if (!data.jobs.length) { openJob(null); return; }
+    editingShift = s;
+    $('shiftDialogTitle').textContent = s ? 'シフトを編集' : 'シフトを追加';
+    $('shJob').innerHTML = data.jobs.map(j => `<option value="${j.id}">${esc(j.name)}</option>`).join('');
+    const last = data.shifts[data.shifts.length - 1];
+    const job = s ? s.jobId : (last && jobOf(last.jobId) ? last.jobId : data.jobs[0].id);
+    $('shJob').value = job;
+    $('shDate').value = s ? s.date : date || defaultDate();
+    $('shStart').value = s ? s.start : (last ? last.start : '17:00');
+    $('shEnd').value = s ? s.end : (last ? last.end : '22:00');
+    $('shBreak').value = s ? s.breakMin : (last ? last.breakMin : 0);
+    $('shTransport').value = s ? s.transport : (jobOf(job).transport || 0);
+    $('shMemo').value = s ? s.memo || '' : '';
+    $('shDelete').classList.toggle('hidden', !s);
+    renderShiftTpls();
+    updatePreview();
+    $('shiftDialog').showModal();
+  }
+  function renderShiftTpls() {
+    const j = jobOf($('shJob').value);
+    $('shTpls').innerHTML = j.templates.map((t, i) => `<button type="button" class="tpl" data-i="${i}">${esc(t.name)} ${t.start}〜${t.end}</button>`).join('');
+  }
+  $('shTpls').addEventListener('click', e => {
+    const b = e.target.closest('[data-i]'); if (!b) return;
+    const t = jobOf($('shJob').value).templates[b.dataset.i];
+    $('shStart').value = t.start; $('shEnd').value = t.end; $('shBreak').value = t.breakMin;
+    updatePreview();
+  });
+  function formShift() {
+    const j = jobOf($('shJob').value);
+    // 編集中で同じバイト先なら記録時の時給を保つ
+    const keep = editingShift && editingShift.jobId === j.id;
+    return {
+      jobId: j.id, date: $('shDate').value, start: $('shStart').value, end: $('shEnd').value,
+      breakMin: Math.max(0, Number($('shBreak').value) || 0), transport: Math.max(0, Number($('shTransport').value) || 0),
+      memo: $('shMemo').value.trim(), wage: keep ? editingShift.wage : j.wage, night: keep ? editingShift.night : !!j.night,
+    };
+  }
+  function updatePreview() {
+    if (!$('shStart').value || !$('shEnd').value) { $('shPreview').textContent = ''; return; }
+    const s = formShift(), c = calcShift(s);
+    $('shPreview').innerHTML = `勤務 <b>${Math.floor(c.work / 60)}時間${c.work % 60 ? c.work % 60 + '分' : ''}</b>${c.night ? `（うち深夜 ${c.night}分）` : ''} → 給料 <b>${yen(c.pay)}</b>`;
+  }
+  ['shStart', 'shEnd', 'shBreak'].forEach(id => $(id).addEventListener('input', updatePreview));
+  $('shJob').addEventListener('change', () => {
+    if (!editingShift) $('shTransport').value = jobOf($('shJob').value).transport || 0;
+    renderShiftTpls(); updatePreview();
+  });
+  $('shiftForm').addEventListener('submit', () => {
+    const s = formShift();
+    if (editingShift) Object.assign(editingShift, s); else data.shifts.push({ id: uid(), ...s });
+    save(); if (tab === 'calendar') jumpTo(s.date); render();
+  });
+  $('shDelete').onclick = () => {
+    if (!confirm('このシフトを削除しますか？')) return;
+    data.shifts = data.shifts.filter(x => x !== editingShift);
+    save(); $('shiftDialog').close(); render();
+  };
+  const openShiftFromRow = e => {
+    const el = e.target.closest('[data-shift]');
+    if (el) openShift(data.shifts.find(s => s.id === el.dataset.shift));
+  };
+  $('shiftList').addEventListener('click', openShiftFromRow);
+  $('nextShift').addEventListener('click', openShiftFromRow);
+  $('nextShift').style.cursor = 'pointer';
+
+  // ---------- 支出 ----------
+  let editingExpense = null;
+  $('exCat').innerHTML = CATEGORIES.map(c => `<option>${c}</option>`).join('');
+  function openExpense(x, date) {
+    editingExpense = x;
+    $('expenseDialogTitle').textContent = x ? '支出を編集' : '支出を追加';
+    $('exDate').value = x ? x.date : date || defaultDate();
+    $('exCat').value = x ? x.category : CATEGORIES[0];
+    $('exAmount').value = x ? x.amount : '';
+    $('exMemo').value = x ? x.memo || '' : '';
+    $('exDelete').classList.toggle('hidden', !x);
+    $('expenseDialog').showModal();
+  }
+  $('expenseForm').addEventListener('submit', () => {
+    const x = { date: $('exDate').value, category: $('exCat').value, amount: Math.max(0, Number($('exAmount').value) || 0), memo: $('exMemo').value.trim() };
+    if (editingExpense) Object.assign(editingExpense, x); else data.expenses.push({ id: uid(), ...x });
+    save(); if (tab === 'expenses') jumpTo(x.date); render();
+  });
+  $('exDelete').onclick = () => {
+    if (!confirm('この支出を削除しますか？')) return;
+    data.expenses = data.expenses.filter(x => x !== editingExpense);
+    save(); $('expenseDialog').close(); render();
+  };
+  $('expenseList').addEventListener('click', e => {
+    const li = e.target.closest('[data-expense]');
+    if (li) openExpense(data.expenses.find(x => x.id === li.dataset.expense));
+  });
+
+  // ---------- バイト先 ----------
+  const dayOptions = Array.from({ length: 28 }, (_, i) => `<option value="${i + 1}">${i + 1}日</option>`).join('') + '<option value="0">末日</option>';
+  $('jbClose').innerHTML = dayOptions;
+  $('jbPayDay').innerHTML = dayOptions;
+  let editingJob = null, tplDraft = [];
+  function renderTplEditor() {
+    $('tplEditor').innerHTML = tplDraft.map((t, i) => `<div class="tpl-edit" data-i="${i}">
+      <input data-k="name" value="${esc(t.name)}" placeholder="名前" maxlength="10" aria-label="テンプレート名">
+      <input data-k="start" type="time" value="${t.start}" aria-label="開始">
+      <input data-k="end" type="time" value="${t.end}" aria-label="終了">
+      <input data-k="breakMin" type="number" min="0" step="5" value="${t.breakMin}" aria-label="休憩（分）" title="休憩（分）">
+      <button type="button" data-del aria-label="削除">×</button></div>`).join('');
+  }
+  $('tplEditor').addEventListener('input', e => {
+    const row = e.target.closest('[data-i]'), k = e.target.dataset.k;
+    if (row && k) tplDraft[row.dataset.i][k] = k === 'breakMin' ? Math.max(0, Number(e.target.value) || 0) : e.target.value;
+  });
+  $('tplEditor').addEventListener('click', e => {
+    if (!e.target.closest('[data-del]')) return;
+    tplDraft.splice(e.target.closest('[data-i]').dataset.i, 1); renderTplEditor();
+  });
+  $('tplAdd').onclick = () => {
+    const presets = [['早番', '09:00', '15:00', 45], ['遅番', '17:00', '22:00', 0], ['通し', '10:00', '20:00', 60]];
+    const p = presets[tplDraft.length] || ['シフト', '12:00', '17:00', 0];
+    tplDraft.push({ name: p[0], start: p[1], end: p[2], breakMin: p[3] }); renderTplEditor();
+  };
+  function openJob(j) {
+    editingJob = j;
+    $('jobDialogTitle').textContent = j ? 'バイト先を編集' : 'バイト先を追加';
+    $('jbName').value = j ? j.name : '';
+    $('jbWage').value = j ? j.wage : '';
+    $('jbTransport').value = j ? j.transport || 0 : 0;
+    $('jbColor').value = j ? j.color : COLORS[data.jobs.length % COLORS.length];
+    $('jbNight').checked = j ? !!j.night : true;
+    $('jbClose').value = j ? j.closeDay : 0;
+    $('jbPayMonth').value = j ? j.payMonth : 1;
+    $('jbPayDay').value = j ? j.payDay : 25;
+    tplDraft = j ? j.templates.map(t => ({ ...t })) : [];
+    renderTplEditor();
+    $('jbDelete').classList.toggle('hidden', !j);
+    $('jobDialog').showModal();
+  }
+  $('jobForm').addEventListener('submit', () => {
+    const j = {
+      name: $('jbName').value.trim(), wage: Number($('jbWage').value), transport: Math.max(0, Number($('jbTransport').value) || 0),
+      color: $('jbColor').value, night: $('jbNight').checked,
+      closeDay: Number($('jbClose').value), payMonth: Number($('jbPayMonth').value), payDay: Number($('jbPayDay').value),
+      templates: tplDraft.filter(t => t.start && t.end).map(t => ({ ...t, name: t.name.trim() || 'シフト' })),
+    };
+    if (editingJob) Object.assign(editingJob, j); else data.jobs.push({ id: uid(), ...j });
+    save(); render();
+  });
+  $('jbDelete').onclick = () => {
+    const n = data.shifts.filter(s => s.jobId === editingJob.id).length;
+    if (!confirm(n ? `このバイト先のシフト${n}件も一緒に削除されます。よろしいですか？` : 'このバイト先を削除しますか？')) return;
+    data.shifts = data.shifts.filter(s => s.jobId !== editingJob.id);
+    data.jobs = data.jobs.filter(j => j !== editingJob);
+    save(); $('jobDialog').close(); render();
+  };
+  $('jobList').addEventListener('click', e => {
+    if (e.target.closest('#addJobRow')) return openJob(null);
+    const li = e.target.closest('[data-job]');
+    if (li) openJob(jobOf(li.dataset.job));
+  });
+
+  $('fab').onclick = () => tab === 'expenses' ? openExpense(null) : openShift(null);
+
+  function jumpTo(date) {
+    const [y, m] = parse(date);
+    viewY = y; viewM = m - 1;
+  }
+
+  // ---------- 設定 ----------
+  const wallSel = $('wallSelect');
+  function syncWall() {
+    const w = String(data.settings.wall);
+    const preset = [...wallSel.options].some(o => o.value === w);
+    wallSel.value = preset ? w : 'custom';
+    $('wallCustomField').classList.toggle('hidden', preset);
+    $('wallCustom').value = data.settings.wall;
+  }
+  wallSel.onchange = () => {
+    if (wallSel.value === 'custom') { $('wallCustomField').classList.remove('hidden'); $('wallCustom').focus(); return; }
+    data.settings.wall = Number(wallSel.value); save(); syncWall(); render();
+  };
+  $('wallCustom').oninput = () => { data.settings.wall = Math.max(0, Number($('wallCustom').value) || 0); save(); };
+
+  function download(name, text, type) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $('exportCsv').onclick = () => {
+    const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [];
+    data.shifts.forEach(s => { const j = jobOf(s.jobId), c = calcShift(s); rows.push(['シフト', s.date, j ? j.name : '', s.start, s.end, s.breakMin, c.work, c.pay, s.transport, ymd(payDateOfShift(s)), '', s.memo]); });
+    data.expenses.forEach(e => rows.push(['支出', e.date, e.category, '', '', '', '', '', '', '', e.amount, e.memo]));
+    rows.sort((a, b) => a[1].localeCompare(b[1]));
+    rows.unshift(['種類', '日付', 'バイト先/カテゴリ', '開始', '終了', '休憩(分)', '勤務(分)', '給料', '交通費', '給料日', '支出', 'メモ']);
+    download(`baito_${today}.csv`, '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n'), 'text/csv');
+  };
+  $('exportJson').onclick = () => download(`baito_backup_${today}.json`, JSON.stringify(data, null, 2), 'application/json');
+  $('importJson').onclick = () => $('importFile').click();
+  $('importFile').onchange = async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      if (!Array.isArray(d.jobs) || !Array.isArray(d.shifts)) throw new Error();
+      if (!confirm('今のデータをバックアップの内容で置き換えます。よろしいですか？')) return;
+      data = normalize(d);
+      save(); syncWall(); render();
+      alert('復元しました。');
+    } catch (err) { alert('バックアップファイルを読み込めませんでした。'); }
+  };
+
+  // ---------- シフトのお知らせ ----------
+  const remindOf = s => {
+    const r = data.settings.remind;
+    if (!r || r === '0') return null;
+    const start = new Date(`${s.date}T${s.start}`);
+    if (r === 'eve') { const d = new Date(start); d.setDate(d.getDate() - 1); d.setHours(21, 0, 0, 0); return d; }
+    return new Date(start - Number(r) * 60000);
+  };
+  const remindText = s => { const j = jobOf(s.jobId); return `${dayLabel(s.date)} ${s.start}〜${s.end} ${j ? j.name : ''}`; };
+  function showBanner(text) {
+    const b = document.createElement('div');
+    b.className = 'banner'; b.textContent = '⏰ ' + text;
+    b.onclick = () => b.remove();
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 10000);
+  }
+  function checkReminders() {
+    const t = Date.now();
+    let sent;
+    try { sent = JSON.parse(localStorage.getItem(KEY + '-notified')) || []; } catch (e) { sent = []; }
+    data.shifts.forEach(s => {
+      const at = remindOf(s), start = new Date(`${s.date}T${s.start}`);
+      const tag = `${s.id}@${s.date}T${s.start}@${data.settings.remind}`;
+      // お知らせ時刻を過ぎていて、シフトがまだ始まっていないもの
+      if (!at || t < at || t >= start || sent.includes(tag)) return;
+      sent.push(tag);
+      const body = remindText(s);
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification('もうすぐシフトです', { body, tag }); } catch (e) { showBanner(body); }
+      } else showBanner('もうすぐシフト：' + body);
+    });
+    try { localStorage.setItem(KEY + '-notified', JSON.stringify(sent.slice(-200))); } catch (e) {}
+  }
+  $('remindSelect').value = data.settings.remind || '0';
+  $('remindSelect').onchange = () => { data.settings.remind = $('remindSelect').value; save(); syncNotifyBtn(); };
+  function syncNotifyBtn() {
+    const btn = $('notifyPerm');
+    if (!('Notification' in window)) { btn.classList.add('hidden'); return; }
+    btn.disabled = Notification.permission !== 'default';
+    btn.textContent = Notification.permission === 'granted' ? '通知は許可済み' : Notification.permission === 'denied' ? '通知がブロックされています' : '通知を許可する';
+  }
+  $('notifyPerm').onclick = async () => {
+    await Notification.requestPermission();
+    syncNotifyBtn();
+    if (Notification.permission === 'granted') new Notification('通知をオンにしました', { body: 'シフトの前にお知らせします。' });
+  };
+  syncNotifyBtn();
+  setInterval(checkReminders, 30000);
+  checkReminders();
+
+  // .ics（カレンダーアプリ用）
+  $('exportIcs').onclick = () => {
+    const stamp = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const icsEsc = s => String(s).replace(/[\\;,]/g, c => '\\' + c).replace(/\n/g, '\\n');
+    const list = sortShifts(data.shifts.filter(s => s.date >= today));
+    if (!list.length) return alert('今日以降のシフトがありません。');
+    const r = data.settings.remind;
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//baito-shushi//JA', 'CALSCALE:GREGORIAN'];
+    list.forEach(s => {
+      const j = jobOf(s.jobId), start = new Date(`${s.date}T${s.start}`), end = new Date(`${s.date}T${s.end}`);
+      if (end <= start) end.setDate(end.getDate() + 1);
+      lines.push('BEGIN:VEVENT', `UID:${s.id}@baito-shushi`, `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
+        `SUMMARY:${icsEsc('バイト：' + (j ? j.name : ''))}`, `DESCRIPTION:${icsEsc(`給料 ${yen(calcShift(s).pay)}${s.memo ? '\n' + s.memo : ''}`)}`);
+      if (r && r !== '0') {
+        const before = Math.round((start - remindOf(s)) / 60000);
+        lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEsc('もうすぐシフト：' + (j ? j.name : ''))}`, `TRIGGER:-PT${before}M`, 'END:VALARM');
+      }
+      lines.push('END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    download(`baito_shifts_${today}.ics`, lines.join('\r\n'), 'text/calendar');
+  };
+
+  syncWall();
+  render();
+  addEventListener('resize', () => { if (tab === 'salary') renderChart(); });
+})();
+</script>
+</body>
+</html>
