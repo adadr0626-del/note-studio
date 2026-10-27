@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f766e">
+<title>バイト収支表</title>
+<style>
+  :root {
+    --bg:#f5f7f6;--card:#ffffff;--text:#1c2422;--dim:#64706c;--line:#e2e8e5;
+    --accent:#0f766e;--accent-soft:#e6f4f1;--plus:#0f766e;--minus:#c2410c;--warn:#b45309;--danger:#b91c1c;
+    --shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0f1413;--card:#181f1d;--text:#e6ece9;--dim:#94a39e;--line:#2a3431;
+      --accent:#2dd4bf;--accent-soft:#163330;--plus:#2dd4bf;--minus:#fb923c;--warn:#fbbf24;--danger:#f87171;
+      --shadow:none;
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Hiragino Sans','Yu Gothic UI','Meiryo',system-ui,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%;}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 16px 96px;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;}
+  h1{font-size:20px;font-weight:800;}
+  .month{display:flex;align-items:center;gap:4px;}
+  .month span{font-weight:700;min-width:7.5em;text-align:center;font-variant-numeric:tabular-nums;}
+  button{font:inherit;color:inherit;cursor:pointer;border:none;background:none;}
+  .icon-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-size:16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);}
+  .stat .label{font-size:12px;color:var(--dim);}
+  .stat .value{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .stat .sub{font-size:11px;color:var(--dim);}
+  .plus{color:var(--plus);} .minus{color:var(--minus);}
+  .wall-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .wall-head b{font-size:15px;}
+  .bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden;}
+  .bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s;}
+  .bar.warn i{background:var(--warn);} .bar.over i{background:var(--danger);}
+  .wall-note{font-size:12px;color:var(--dim);margin-top:6px;}
+  .tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:12px;}
+  .tabs button{flex:1;padding:8px 4px;border-radius:8px;font-size:14px;font-weight:600;color:var(--dim);}
+  .tabs button.on{background:var(--accent-soft);color:var(--accent);}
+  .list{list-style:none;}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .row:last-child{border-bottom:none;}
+  .row .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .row .main{flex:1;min-width:0;}
+  .row .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .row .meta{font-size:12px;color:var(--dim);}
+  .row .amt{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .empty{text-align:center;color:var(--dim);padding:24px 8px;font-size:14px;}
+  .breakdown{margin-top:8px;}
+  .bd-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:var(--dim);}
+  .bd-row b{color:var(--text);font-variant-numeric:tabular-nums;}
+  .fab{position:fixed;right:max(16px,calc(50% - 344px));bottom:20px;height:52px;padding:0 22px;border-radius:26px;background:var(--accent);color:#fff;font-weight:700;font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,.2);}
+  @media (prefers-color-scheme: dark){.fab{color:#06201d;}}
+  .section-title{font-size:13px;font-weight:700;color:var(--dim);margin:4px 0 8px;}
+  .btn{padding:10px 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-weight:600;font-size:14px;}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  @media (prefers-color-scheme: dark){.btn.primary{color:#06201d;}}
+  .btn.danger{color:var(--danger);}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+  dialog{border:none;border-radius:16px;padding:0;width:min(440px,calc(100% - 32px));background:var(--card);color:var(--text);margin:auto;}
+  dialog::backdrop{background:rgba(0,0,0,.45);}
+  dialog form{padding:20px;}
+  dialog h2{font-size:17px;margin-bottom:14px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--dim);margin-bottom:4px;}
+  .field input,.field select{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;font-size:16px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .check{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:12px;}
+  .check input{width:18px;height:18px;}
+  .preview{background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:14px;margin-bottom:14px;}
+  .preview b{font-variant-numeric:tabular-nums;}
+  .dialog-actions{display:flex;gap:8px;justify-content:flex-end;}
+  .dialog-actions .left{margin-right:auto;}
+  .help{font-size:12px;color:var(--dim);margin-top:4px;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>バイト収支表</h1>
+    <div class="month">
+      <button class="icon-btn" id="prevMonth" aria-label="前の月">◀</button>
+      <span id="monthLabel"></span>
+      <button class="icon-btn" id="nextMonth" aria-label="次の月">▶</button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="label">今月の給料</div><div class="value plus" id="sIncome">¥0</div><div class="sub" id="sIncomeSub"></div></div>
+    <div class="stat"><div class="label">今月の支出</div><div class="value minus" id="sExpense">¥0</div><div class="sub" id="sExpenseSub"></div></div>
+    <div class="stat"><div class="label">収支</div><div class="value" id="sBalance">¥0</div><div class="sub">給料＋交通費−支出</div></div>
+    <div class="stat"><div class="label">勤務</div><div class="value" id="sHours">0h</div><div class="sub" id="sHoursSub"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="wall-head"><b id="wallTitle">年収の壁</b><span id="wallText"></span></div>
+    <div class="bar" id="wallBar"><i style="width:0"></i></div>
+    <div class="wall-note" id="wallNote"></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="on" data-tab="shifts">シフト</button>
+    <button data-tab="expenses">支出</button>
+    <button data-tab="jobs">バイト先</button>
+    <button data-tab="settings">設定</button>
+  </div>
+
+  <section id="tab-shifts" class="card">
+    <ul class="list" id="shiftList"></ul>
+    <div class="breakdown" id="jobBreakdown"></div>
+  </section>
+
+  <section id="tab-expenses" class="card hidden">
+    <ul class="list" id="expenseList"></ul>
+    <div class="breakdown" id="catBreakdown"></div>
+  </section>
+
+  <section id="tab-jobs" class="card hidden">
+    <ul class="list" id="jobList"></ul>
+  </section>
+
+  <section id="tab-settings" class="hidden">
+    <div class="card">
+      <div class="section-title">年収の壁</div>
+      <div class="field">
+        <label for="wallSelect">目安にする上限</label>
+        <select id="wallSelect">
+          <option value="1230000">123万円（所得税がかからない上限）</option>
+          <option value="1500000">150万円（19〜22歳の学生：親の扶養控除が満額）</option>
+          <option value="1060000">106万円（社会保険の加入目安）</option>
+          <option value="1300000">130万円（社会保険の扶養上限）</option>
+          <option value="custom">自分で入力</option>
+        </select>
+      </div>
+      <div class="field hidden" id="wallCustomField">
+        <label for="wallCustom">上限（円）</label>
+        <input type="number" id="wallCustom" inputmode="numeric" min="0" step="10000">
+      </div>
+      <p class="help">交通費（非課税）は年収の計算に含めていません。制度は変わることがあるので、最終的には勤務先や税務署で確認してください。</p>
+    </div>
+    <div class="card">
+      <div class="section-title">データ</div>
+      <div class="btn-row">
+        <button class="btn" id="exportCsv">CSVで書き出し</button>
+        <button class="btn" id="exportJson">バックアップ保存</button>
+        <button class="btn" id="importJson">バックアップから復元</button>
+        <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+      </div>
+      <p class="help">データはこのブラウザの中だけに保存されます。機種変更やブラウザのデータ削除の前にバックアップしてください。</p>
+    </div>
+  </section>
+</div>
+
+<button class="fab" id="fab">＋ シフト</button>
+
+<dialog id="shiftDialog">
+  <form method="dialog" id="shiftForm">
+    <h2 id="shiftDialogTitle">シフトを追加</h2>
+    <div class="field">
+      <label for="shJob">バイト先</label>
+      <select id="shJob" required></select>
+    </div>
+    <div class="field">
+      <label for="shDate">日付</label>
+      <input type="date" id="shDate" required>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="shStart">開始</label><input type="time" id="shStart" required></div>
+      <div class="field"><label for="shEnd">終了</label><input type="time" id="shEnd" required></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="shBreak">休憩（分）</label><input type="number" id="shBreak" inputmode="numeric" min="0" step="5" value="0"></div>
+      <div class="field"><label for="shTransport">交通費（円）</label><input type="number" id="shTransport" inputmode="numeric" min="0" value="0"></div>
+    </div>
+    <div class="field"><label for="shMemo">メモ</label><input type="text" id="shMemo" maxlength="60"></div>
+    <div class="preview" id="shPreview"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn danger left hidden" id="shDelete">削除</button>
+      <button type="button" class="btn" data-close>キャンセル</button>
+      <button type="submit" class="btn primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="expenseDialog">
+  <form method="dialog" id="expenseForm">
+    <h2 id="expenseDialogTitle">支出を追加</h2>
+    <div class="field"><label for="exDate">日付</label><input type="date" id="exDate" required></div>
+    <div class="grid2">
+      <div class="field">
+        <label for="exCat">カテゴリ</label>
+        <select id="exCat"></select>
+      </div>
+      <div class="field"><label for="exAmount">金額（円）</label><input type="number" id="exAmount" inputmode="numeric" min="1" required></div>
+    </div>
+    <div class="field"><label for="exMemo">メモ</label><input type="text" id="exMemo" maxlength="60"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn danger left hidden" id="exDelete">削除</button>
+      <button type="button" class="btn" data-close>キャンセル</button>
+      <button type="submit" class="btn primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="jobDialog">
+  <form method="dialog" id="jobForm">
+    <h2 id="jobDialogTitle">バイト先を追加</h2>
+    <div class="field"><label for="jbName">名前</label><input type="text" id="jbName" maxlength="30" required placeholder="例：カフェ、塾講師"></div>
+    <div class="grid2">
+      <div class="field"><label for="jbWage">時給（円）</label><input type="number" id="jbWage" inputmode="numeric" min="1" required></div>
+      <div class="field"><label for="jbTransport">交通費の初期値</label><input type="number" id="jbTransport" inputmode="numeric" min="0" value="0"></div>
+    </div>
+    <div class="field"><label for="jbColor">色</label><input type="color" id="jbColor" value="#0f766e"></div>
+    <label class="check"><input type="checkbox" id="jbNight" checked> 22時〜5時は深夜手当（時給×1.25）</label>
+    <p class="help">時給を変えても、すでに記録したシフトの給料は変わりません。</p>
+    <div class="dialog-actions" style="margin-top:12px">
+      <button type="button" class="btn danger left hidden" id="jbDelete">削除</button>
+      <button type="button" class="btn" data-close>キャンセル</button>
+      <button type="submit" class="btn primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  const KEY = 'baito-shushi-v1';
+  const CATEGORIES = ['食費','交通','娯楽','日用品','服・美容','通信','学業','その他'];
+  const COLORS = ['#0f766e','#2563eb','#c2410c','#7c3aed','#db2777','#4d7c0f'];
+
+  const $ = id => document.getElementById(id);
+  const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const pad = n => String(n).padStart(2, '0');
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const WEEK = ['日','月','火','水','木','金','土'];
+  const dayLabel = s => { const d = new Date(s + 'T00:00'); return `${d.getMonth() + 1}/${d.getDate()}(${WEEK[d.getDay()]})`; };
+
+  // ---------- データ ----------
+  function load() {
+    try {
+      const d = JSON.parse(localStorage.getItem(KEY));
+      if (d && Array.isArray(d.jobs)) return { jobs: d.jobs, shifts: d.shifts || [], expenses: d.expenses || [], settings: { wall: 1230000, ...(d.settings || {}) } };
+    } catch (e) {}
+    return { jobs: [], shifts: [], expenses: [], settings: { wall: 1230000 } };
+  }
+  let data = load();
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { alert('保存できませんでした。ブラウザの設定を確認してください。'); }
+  }
+
+  // ---------- 給料計算 ----------
+  const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  // 開始〜終了（日をまたぐ場合も）のうち、22:00〜翌5:00 にあたる分数
+  function nightMinutes(start, end) {
+    let n = 0;
+    for (let m = start; m < end; m++) {
+      const t = m % 1440;
+      if (t >= 1320 || t < 300) n++;
+    }
+    return n;
+  }
+  function calcShift(s) {
+    const start = toMin(s.start);
+    let end = toMin(s.end);
+    if (end <= start) end += 1440;
+    const total = end - start;
+    const brk = Math.min(Math.max(0, Number(s.breakMin) || 0), total);
+    let night = s.night ? nightMinutes(start, end) : 0;
+    // 休憩は通常時間から先に差し引く
+    let normal = total - night - brk;
+    if (normal < 0) { night += normal; normal = 0; }
+    const work = normal + night;
+    const pay = Math.floor(s.wage * normal / 60 + s.wage * 1.25 * night / 60);
+    return { work, night, pay };
+  }
+
+  // ---------- 状態 ----------
+  const now = new Date();
+  let viewY = now.getFullYear(), viewM = now.getMonth();
+  let tab = 'shifts';
+  const inMonth = s => { const [y, m] = s.split('-').map(Number); return y === viewY && m === viewM + 1; };
+  const jobOf = id => data.jobs.find(j => j.id === id);
+
+  // ---------- 描画 ----------
+  function render() {
+    $('monthLabel').textContent = `${viewY}年${viewM + 1}月`;
+
+    const shifts = data.shifts.filter(s => inMonth(s.date)).sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start));
+    const expenses = data.expenses.filter(e => inMonth(e.date)).sort((a, b) => b.date.localeCompare(a.date));
+
+    let pay = 0, transport = 0, work = 0;
+    const byJob = {};
+    shifts.forEach(s => {
+      const c = calcShift(s);
+      pay += c.pay; work += c.work; transport += Number(s.transport) || 0;
+      byJob[s.jobId] = byJob[s.jobId] || { pay: 0, work: 0, n: 0 };
+      byJob[s.jobId].pay += c.pay; byJob[s.jobId].work += c.work; byJob[s.jobId].n++;
+    });
+    const expense = expenses.reduce((a, e) => a + Number(e.amount), 0);
+    const balance = pay + transport - expense;
+
+    $('sIncome').textContent = yen(pay);
+    $('sIncomeSub').textContent = transport ? `＋交通費 ${yen(transport)}` : '';
+    $('sExpense').textContent = yen(expense);
+    $('sExpenseSub').textContent = expenses.length ? `${expenses.length}件` : '';
+    $('sBalance').textContent = (balance < 0 ? '−' : '') + yen(Math.abs(balance));
+    $('sBalance').className = 'value ' + (balance < 0 ? 'minus' : 'plus');
+    $('sHours').textContent = `${Math.floor(work / 60)}h${work % 60 ? pad(work % 60) + 'm' : ''}`;
+    $('sHoursSub').textContent = shifts.length ? `${shifts.length}回出勤` : '';
+
+    renderWall();
+
+    // シフト一覧
+    $('shiftList').innerHTML = shifts.length ? shifts.map(s => {
+      const j = jobOf(s.jobId), c = calcShift(s);
+      return `<li class="row" data-shift="${s.id}">
+        <span class="dot" style="background:${esc(j ? j.color : '#999')}"></span>
+        <div class="main"><div class="title">${dayLabel(s.date)} ${esc(j ? j.name : '（削除済み）')}</div>
+        <div class="meta">${s.start}〜${s.end}・${Math.floor(c.work / 60)}時間${c.work % 60 ? c.work % 60 + '分' : ''}${c.night ? '（深夜' + c.night + '分）' : ''}${s.memo ? '・' + esc(s.memo) : ''}</div></div>
+        <span class="amt plus">${yen(c.pay)}</span></li>`;
+    }).join('') : `<li class="empty">${data.jobs.length ? 'この月のシフトはまだありません。<br>右下の「＋ シフト」から追加しましょう。' : 'まずは「バイト先」タブで働いているお店と時給を登録しましょう。'}</li>`;
+
+    const jobIds = Object.keys(byJob);
+    $('jobBreakdown').innerHTML = jobIds.length > 1 ? jobIds.map(id => {
+      const j = jobOf(id), b = byJob[id];
+      return `<div class="bd-row"><span>${esc(j ? j.name : '（削除済み）')}（${b.n}回・${(b.work / 60).toFixed(1)}h）</span><b>${yen(b.pay)}</b></div>`;
+    }).join('') : '';
+
+    // 支出一覧
+    $('expenseList').innerHTML = expenses.length ? expenses.map(e => `<li class="row" data-expense="${e.id}">
+        <div class="main"><div class="title">${esc(e.category)}${e.memo ? '・' + esc(e.memo) : ''}</div><div class="meta">${dayLabel(e.date)}</div></div>
+        <span class="amt minus">${yen(e.amount)}</span></li>`).join('')
+      : '<li class="empty">この月の支出はまだありません。</li>';
+    const byCat = {};
+    expenses.forEach(e => byCat[e.category] = (byCat[e.category] || 0) + Number(e.amount));
+    $('catBreakdown').innerHTML = Object.entries(byCat).sort((a, b) => b[1] - a[1])
+      .map(([k, v]) => `<div class="bd-row"><span>${esc(k)}</span><b>${yen(v)}</b></div>`).join('');
+
+    // バイト先一覧
+    $('jobList').innerHTML = data.jobs.map(j => `<li class="row" data-job="${j.id}">
+        <span class="dot" style="background:${esc(j.color)}"></span>
+        <div class="main"><div class="title">${esc(j.name)}</div><div class="meta">時給 ${yen(j.wage)}${j.night ? '・深夜手当あり' : ''}${j.transport ? '・交通費 ' + yen(j.transport) : ''}</div></div>
+        <span class="meta">編集 ›</span></li>`).join('')
+      + '<li class="row" id="addJobRow"><div class="main"><div class="title" style="color:var(--accent)">＋ バイト先を追加</div></div></li>';
+
+    // FAB
+    const fab = $('fab');
+    fab.classList.toggle('hidden', tab === 'settings');
+    fab.textContent = tab === 'expenses' ? '＋ 支出' : tab === 'jobs' ? '＋ バイト先' : '＋ シフト';
+  }
+
+  function renderWall() {
+    const wall = Number(data.settings.wall) || 0;
+    const year = data.shifts.filter(s => s.date.startsWith(viewY + '-')).reduce((a, s) => a + calcShift(s).pay, 0);
+    const rate = wall ? year / wall : 0;
+    $('wallTitle').textContent = `${viewY}年の年収`;
+    $('wallText').innerHTML = `<b>${yen(year)}</b> / ${yen(wall)}`;
+    const bar = $('wallBar');
+    bar.className = 'bar' + (rate >= 1 ? ' over' : rate >= 0.85 ? ' warn' : '');
+    bar.firstElementChild.style.width = Math.min(100, rate * 100) + '%';
+    const left = wall - year;
+    let note;
+    if (left < 0) note = `上限を ${yen(-left)} 超えています。`;
+    else {
+      // 残り月数（表示中の年が今年なら今月を含めた残り、未来の年なら12か月）
+      const monthsLeft = viewY === now.getFullYear() ? 12 - now.getMonth() : viewY > now.getFullYear() ? 12 : 0;
+      note = `あと ${yen(left)}` + (monthsLeft ? `（月あたり約 ${yen(left / monthsLeft)} まで）` : '');
+    }
+    $('wallNote').textContent = note;
+  }
+
+  // ---------- タブ・月 ----------
+  document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+    tab = b.dataset.tab;
+    document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+    ['shifts', 'expenses', 'jobs', 'settings'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== tab));
+    render();
+  }));
+  $('prevMonth').onclick = () => { if (--viewM < 0) { viewM = 11; viewY--; } render(); };
+  $('nextMonth').onclick = () => { if (++viewM > 11) { viewM = 0; viewY++; } render(); };
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+
+  const defaultDate = () => (viewY === now.getFullYear() && viewM === now.getMonth()) ? ymd(now) : `${viewY}-${pad(viewM + 1)}-01`;
+
+  // ---------- シフト ----------
+  let editingShift = null;
+  function openShift(s) {
+    if (!data.jobs.length) { openJob(null); return; }
+    editingShift = s;
+    $('shiftDialogTitle').textContent = s ? 'シフトを編集' : 'シフトを追加';
+    $('shJob').innerHTML = data.jobs.map(j => `<option value="${j.id}">${esc(j.name)}</option>`).join('');
+    const last = data.shifts[data.shifts.length - 1];
+    const job = s ? s.jobId : (last && jobOf(last.jobId) ? last.jobId : data.jobs[0].id);
+    $('shJob').value = job;
+    $('shDate').value = s ? s.date : defaultDate();
+    $('shStart').value = s ? s.start : (last ? last.start : '17:00');
+    $('shEnd').value = s ? s.end : (last ? last.end : '22:00');
+    $('shBreak').value = s ? s.breakMin : (last ? last.breakMin : 0);
+    $('shTransport').value = s ? s.transport : (jobOf(job).transport || 0);
+    $('shMemo').value = s ? s.memo || '' : '';
+    $('shDelete').classList.toggle('hidden', !s);
+    updatePreview();
+    $('shiftDialog').showModal();
+  }
+  function formShift() {
+    const j = jobOf($('shJob').value);
+    // 編集中で同じバイト先なら記録時の時給を保つ
+    const keep = editingShift && editingShift.jobId === j.id;
+    return {
+      jobId: j.id, date: $('shDate').value, start: $('shStart').value, end: $('shEnd').value,
+      breakMin: Math.max(0, Number($('shBreak').value) || 0), transport: Math.max(0, Number($('shTransport').value) || 0),
+      memo: $('shMemo').value.trim(), wage: keep ? editingShift.wage : j.wage, night: keep ? editingShift.night : !!j.night,
+    };
+  }
+  function updatePreview() {
+    if (!$('shStart').value || !$('shEnd').value) { $('shPreview').textContent = ''; return; }
+    const s = formShift(), c = calcShift(s);
+    $('shPreview').innerHTML = `勤務 <b>${Math.floor(c.work / 60)}時間${c.work % 60 ? c.work % 60 + '分' : ''}</b>${c.night ? `（うち深夜 ${c.night}分）` : ''} → 給料 <b>${yen(c.pay)}</b>`;
+  }
+  ['shJob', 'shStart', 'shEnd', 'shBreak'].forEach(id => $(id).addEventListener('input', updatePreview));
+  $('shJob').addEventListener('change', () => { if (!editingShift) $('shTransport').value = jobOf($('shJob').value).transport || 0; });
+  $('shiftForm').addEventListener('submit', () => {
+    const s = formShift();
+    if (editingShift) Object.assign(editingShift, s); else data.shifts.push({ id: uid(), ...s });
+    save(); jumpTo(s.date); render();
+  });
+  $('shDelete').onclick = () => {
+    if (!confirm('このシフトを削除しますか？')) return;
+    data.shifts = data.shifts.filter(x => x !== editingShift);
+    save(); $('shiftDialog').close(); render();
+  };
+  $('shiftList').addEventListener('click', e => {
+    const li = e.target.closest('[data-shift]');
+    if (li) openShift(data.shifts.find(s => s.id === li.dataset.shift));
+  });
+
+  // ---------- 支出 ----------
+  let editingExpense = null;
+  $('exCat').innerHTML = CATEGORIES.map(c => `<option>${c}</option>`).join('');
+  function openExpense(x) {
+    editingExpense = x;
+    $('expenseDialogTitle').textContent = x ? '支出を編集' : '支出を追加';
+    $('exDate').value = x ? x.date : defaultDate();
+    $('exCat').value = x ? x.category : CATEGORIES[0];
+    $('exAmount').value = x ? x.amount : '';
+    $('exMemo').value = x ? x.memo || '' : '';
+    $('exDelete').classList.toggle('hidden', !x);
+    $('expenseDialog').showModal();
+  }
+  $('expenseForm').addEventListener('submit', () => {
+    const x = { date: $('exDate').value, category: $('exCat').value, amount: Math.max(0, Number($('exAmount').value) || 0), memo: $('exMemo').value.trim() };
+    if (editingExpense) Object.assign(editingExpense, x); else data.expenses.push({ id: uid(), ...x });
+    save(); jumpTo(x.date); render();
+  });
+  $('exDelete').onclick = () => {
+    if (!confirm('この支出を削除しますか？')) return;
+    data.expenses = data.expenses.filter(x => x !== editingExpense);
+    save(); $('expenseDialog').close(); render();
+  };
+  $('expenseList').addEventListener('click', e => {
+    const li = e.target.closest('[data-expense]');
+    if (li) openExpense(data.expenses.find(x => x.id === li.dataset.expense));
+  });
+
+  // ---------- バイト先 ----------
+  let editingJob = null;
+  function openJob(j) {
+    editingJob = j;
+    $('jobDialogTitle').textContent = j ? 'バイト先を編集' : 'バイト先を追加';
+    $('jbName').value = j ? j.name : '';
+    $('jbWage').value = j ? j.wage : '';
+    $('jbTransport').value = j ? j.transport || 0 : 0;
+    $('jbColor').value = j ? j.color : COLORS[data.jobs.length % COLORS.length];
+    $('jbNight').checked = j ? !!j.night : true;
+    $('jbDelete').classList.toggle('hidden', !j);
+    $('jobDialog').showModal();
+  }
+  $('jobForm').addEventListener('submit', () => {
+    const j = { name: $('jbName').value.trim(), wage: Number($('jbWage').value), transport: Math.max(0, Number($('jbTransport').value) || 0), color: $('jbColor').value, night: $('jbNight').checked };
+    if (editingJob) Object.assign(editingJob, j); else data.jobs.push({ id: uid(), ...j });
+    save(); render();
+  });
+  $('jbDelete').onclick = () => {
+    const n = data.shifts.filter(s => s.jobId === editingJob.id).length;
+    if (!confirm(n ? `このバイト先のシフト${n}件も一緒に削除されます。よろしいですか？` : 'このバイト先を削除しますか？')) return;
+    data.shifts = data.shifts.filter(s => s.jobId !== editingJob.id);
+    data.jobs = data.jobs.filter(j => j !== editingJob);
+    save(); $('jobDialog').close(); render();
+  };
+  $('jobList').addEventListener('click', e => {
+    if (e.target.closest('#addJobRow')) return openJob(null);
+    const li = e.target.closest('[data-job]');
+    if (li) openJob(jobOf(li.dataset.job));
+  });
+
+  $('fab').onclick = () => tab === 'expenses' ? openExpense(null) : tab === 'jobs' ? openJob(null) : openShift(null);
+
+  function jumpTo(date) {
+    const [y, m] = date.split('-').map(Number);
+    viewY = y; viewM = m - 1;
+  }
+
+  // ---------- 設定 ----------
+  const wallSel = $('wallSelect');
+  function syncWall() {
+    const w = String(data.settings.wall);
+    const preset = [...wallSel.options].some(o => o.value === w);
+    wallSel.value = preset ? w : 'custom';
+    $('wallCustomField').classList.toggle('hidden', preset);
+    $('wallCustom').value = data.settings.wall;
+  }
+  wallSel.onchange = () => {
+    if (wallSel.value === 'custom') { $('wallCustomField').classList.remove('hidden'); $('wallCustom').focus(); return; }
+    data.settings.wall = Number(wallSel.value); save(); syncWall(); render();
+  };
+  $('wallCustom').oninput = () => { data.settings.wall = Math.max(0, Number($('wallCustom').value) || 0); save(); render(); };
+
+  function download(name, text, type) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $('exportCsv').onclick = () => {
+    const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [];
+    data.shifts.forEach(s => { const j = jobOf(s.jobId), c = calcShift(s); rows.push(['シフト', s.date, j ? j.name : '', s.start, s.end, s.breakMin, c.work, c.pay, s.transport, '', s.memo]); });
+    data.expenses.forEach(e => rows.push(['支出', e.date, e.category, '', '', '', '', '', '', e.amount, e.memo]));
+    rows.sort((a, b) => a[1].localeCompare(b[1]));
+    rows.unshift(['種類', '日付', 'バイト先/カテゴリ', '開始', '終了', '休憩(分)', '勤務(分)', '給料', '交通費', '支出', 'メモ']);
+    download(`baito_${ymd(new Date())}.csv`, '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n'), 'text/csv');
+  };
+  $('exportJson').onclick = () => download(`baito_backup_${ymd(new Date())}.json`, JSON.stringify(data, null, 2), 'application/json');
+  $('importJson').onclick = () => $('importFile').click();
+  $('importFile').onchange = async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      if (!Array.isArray(d.jobs) || !Array.isArray(d.shifts)) throw new Error();
+      if (!confirm('今のデータをバックアップの内容で置き換えます。よろしいですか？')) return;
+      data = { jobs: d.jobs, shifts: d.shifts, expenses: d.expenses || [], settings: { wall: 1230000, ...(d.settings || {}) } };
+      save(); syncWall(); render();
+      alert('復元しました。');
+    } catch (err) { alert('バックアップファイルを読み込めませんでした。'); }
+  };
+
+  syncWall();
+  render();
+})();
+</script>
+</body>
+</html>
