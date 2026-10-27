@@ -301,6 +301,7 @@
       <div class="field"><label for="shBreak">休憩（分）</label><input type="number" id="shBreak" inputmode="numeric" min="0" step="5" value="0"></div>
       <div class="field"><label for="shTransport">交通費（円）</label><input type="number" id="shTransport" inputmode="numeric" min="0" value="0"></div>
     </div>
+    <p class="help" style="margin:-6px 0 12px">休憩は勤務の早い時間帯から差し引いて計算します。</p>
     <div class="field"><label for="shMemo">メモ</label><input type="text" id="shMemo" maxlength="60"></div>
     <div class="preview" id="shPreview"></div>
     <div class="dialog-actions">
@@ -455,11 +456,9 @@
     if (end <= start) end += 1440;
     const total = end - start;
     const brk = Math.min(Math.max(0, Number(s.breakMin) || 0), total);
-    let night = s.night ? nightMinutes(start, end) : 0;
-    // 休憩は通常時間から先に差し引く
-    let normal = total - night - brk;
-    if (normal < 0) { night += normal; normal = 0; }
-    const work = normal + night;
+    // 休憩は勤務の手前（早い時間帯）から差し引く
+    const night = s.night ? nightMinutes(start + brk, end) : 0;
+    const work = total - brk, normal = work - night;
     const pay = Math.floor(s.wage * normal / 60 + s.wage * 1.25 * night / 60);
     return { work, night, pay };
   }
