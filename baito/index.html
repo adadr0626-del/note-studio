@@ -119,6 +119,29 @@
   .tpl-edit{display:grid;grid-template-columns:1.2fr 1fr 1fr .8fr auto;gap:6px;align-items:center;margin-bottom:6px;}
   .tpl-edit input{padding:8px 6px;font-size:14px;}
   .tpl-edit button{color:var(--danger);font-size:18px;padding:0 4px;}
+  .cell.hol .d{color:var(--sun);}
+  .hol-name{font-size:12px;color:var(--sun);font-weight:600;margin:-8px 0 10px;}
+
+  /* グラフ */
+  .chart-wrap{position:relative;}
+  .chart-wrap svg{display:block;width:100%;overflow:visible;}
+  .chart-wrap .grid{stroke:var(--line);stroke-width:1;}
+  .chart-wrap .axis{fill:var(--dim);font-size:10px;font-variant-numeric:tabular-nums;}
+  .chart-wrap .axis.on{fill:var(--text);font-weight:700;}
+  .chart-wrap .hit{fill:transparent;cursor:pointer;}
+  .chart-wrap .hit:hover,.chart-wrap .hit.on{fill:var(--accent-soft);}
+  .legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--dim);margin-top:8px;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+  .tip{position:absolute;pointer-events:none;background:var(--text);color:var(--bg);border-radius:8px;padding:6px 10px;font-size:12px;line-height:1.5;white-space:nowrap;transform:translate(-50%,-100%);z-index:2;}
+  .tip b{font-variant-numeric:tabular-nums;}
+  details.table{margin-top:10px;font-size:13px;}
+  details.table summary{cursor:pointer;color:var(--dim);}
+  details.table table{width:100%;border-collapse:collapse;margin-top:6px;}
+  details.table th,details.table td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;}
+  details.table th:first-child,details.table td:first-child{text-align:left;}
+
+  .banner{position:fixed;left:50%;top:12px;transform:translateX(-50%);width:min(440px,calc(100% - 32px));background:var(--text);color:var(--bg);border-radius:12px;padding:12px 16px;font-size:14px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;}
   .hidden{display:none !important;}
 </style>
 </head>
@@ -153,6 +176,12 @@
       <div class="note" id="payTotalNote"></div>
     </div>
     <div id="payJobs"></div>
+    <div class="card">
+      <div class="section-title" id="chartTitle">月別の振込額</div>
+      <div class="chart-wrap" id="chart"></div>
+      <div class="legend" id="chartLegend"></div>
+      <details class="table"><summary>表で見る</summary><div id="chartTable"></div></details>
+    </div>
     <div class="card">
       <div class="wall-head"><b id="wallTitle"></b><span id="wallText"></span></div>
       <div class="bar" id="wallBar"><i style="width:0"></i></div>
@@ -196,6 +225,24 @@
         <input type="number" id="wallCustom" inputmode="numeric" min="0" step="10000">
       </div>
       <p class="help">年収は給料日（振り込まれる日）の年で数えます。交通費（非課税）は含めていません。制度は変わることがあるので、最終的には勤務先や税務署で確認してください。</p>
+    </div>
+    <div class="card">
+      <div class="section-title">シフトのお知らせ</div>
+      <div class="field">
+        <label for="remindSelect">いつ知らせる？</label>
+        <select id="remindSelect">
+          <option value="0">知らせない</option>
+          <option value="30">30分前</option>
+          <option value="60">1時間前</option>
+          <option value="120">2時間前</option>
+          <option value="eve">前日の21時</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="notifyPerm">通知を許可する</button>
+        <button class="btn" id="exportIcs">カレンダーアプリに追加（.ics）</button>
+      </div>
+      <p class="help" id="notifyHelp">このページを開いている間はブラウザの通知でお知らせします。アプリを閉じていても確実に知らせてほしいときは「カレンダーアプリに追加」を使うと、スマホのカレンダーのアラームで通知されます（今日以降のシフトが対象。シフトを増やしたら再度追加してください）。</p>
     </div>
     <div class="card">
       <div class="section-title">データ</div>
@@ -318,8 +365,40 @@
 (() => {
   const KEY = 'baito-shushi-v1';
   const CATEGORIES = ['食費','交通','娯楽','日用品','服・美容','通信','学業','その他'];
-  const COLORS = ['#0f766e','#2563eb','#c2410c','#7c3aed','#db2777','#4d7c0f'];
+  const COLORS = ['#0d9488','#2563eb','#c2410c','#7c3aed','#db2777','#4d7c0f'];
   const WEEK = ['日','月','火','水','木','金','土'];
+
+  // ---------- 祝日（内閣府の祝日法ルールで計算。2020年以降に対応） ----------
+  const holidayCache = {};
+  function holidaysOf(y) {
+    if (holidayCache[y]) return holidayCache[y];
+    const h = {};
+    const key = (m, d) => `${y}-${pad(m)}-${pad(d)}`;
+    const nthMonday = (m, n) => { const first = new Date(y, m - 1, 1).getDay(); return 1 + ((8 - first) % 7) + (n - 1) * 7; };
+    const shift = Math.floor((y - 1980) / 4);
+    const add = (m, d, name) => h[key(m, d)] = name;
+    add(1, 1, '元日'); add(1, nthMonday(1, 2), '成人の日'); add(2, 11, '建国記念の日'); add(2, 23, '天皇誕生日');
+    add(3, Math.floor(20.8431 + 0.242194 * (y - 1980) - shift), '春分の日');
+    add(4, 29, '昭和の日'); add(5, 3, '憲法記念日'); add(5, 4, 'みどりの日'); add(5, 5, 'こどもの日');
+    add(7, nthMonday(7, 3), '海の日'); add(8, 11, '山の日'); add(9, nthMonday(9, 3), '敬老の日');
+    add(9, Math.floor(23.2488 + 0.242194 * (y - 1980) - shift), '秋分の日');
+    add(10, nthMonday(10, 2), 'スポーツの日'); add(11, 3, '文化の日'); add(11, 23, '勤労感謝の日');
+    const ds = d => ymd(d);
+    // 国民の休日：祝日にはさまれた平日
+    Object.keys(h).forEach(k => {
+      const d = new Date(k + 'T00:00'); d.setDate(d.getDate() + 2);
+      if (h[ds(d)]) { const mid = new Date(k + 'T00:00'); mid.setDate(mid.getDate() + 1); if (!h[ds(mid)] && mid.getDay() !== 0) h[ds(mid)] = '国民の休日'; }
+    });
+    // 振替休日：日曜の祝日の後の最初の平日
+    Object.keys(h).sort().forEach(k => {
+      const d = new Date(k + 'T00:00');
+      if (d.getDay() !== 0) return;
+      do d.setDate(d.getDate() + 1); while (h[ds(d)]);
+      h[ds(d)] = '振替休日';
+    });
+    return holidayCache[y] = h;
+  }
+  const holidayName = date => holidaysOf(Number(date.slice(0, 4)))[date];
 
   const $ = id => document.getElementById(id);
   const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
@@ -480,7 +559,8 @@
         const j = jobOf(s.jobId), col = j ? j.color : '#999';
         return `<span class="chip" style="background:${esc(col)};color:${ink(col)}">${s.start}</span>`;
       }).join('') + (list.length > 2 ? `<div class="more">+${list.length - 2}</div>` : '');
-      html += `<div class="cell${dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''}${date === today ? ' today' : ''}" data-date="${date}"><div class="d">${d}</div>${chips}</div>`;
+      const hol = holidayName(date);
+      html += `<div class="cell${dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''}${hol ? ' hol' : ''}${date === today ? ' today' : ''}" data-date="${date}"${hol ? ` title="${hol}"` : ''}><div class="d">${d}</div>${chips}</div>`;
     }
     $('cal').innerHTML = html;
 
@@ -495,7 +575,71 @@
       : `<li class="empty">${data.jobs.length ? 'カレンダーの日付をタップしてシフトを追加しましょう。' : 'まずは「設定」でバイト先と時給を登録しましょう。'}</li>`;
   }
 
+  // ---------- 月別グラフ（給料日ベース・バイト先で積み上げ） ----------
+  const compact = n => n === 0 ? '0' : n >= 10000 ? `${+(n / 10000).toFixed(1)}万` : `${+(n / 1000).toFixed(1)}千`;
+  function niceStep(max) {
+    const raw = max / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    return [1, 2, 2.5, 5, 10].map(f => f * mag).find(s => s >= raw);
+  }
+  // 上だけ角丸の長方形
+  const roundTop = (x, y, w, h, r) => {
+    r = Math.min(r, h, w / 2);
+    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  };
+  function renderChart() {
+    const months = Array.from({ length: 12 }, (_, m) => {
+      const rows = salaryForMonth(viewY, m).map(r => ({ job: r.job, v: r.pay + r.transport })).filter(r => r.v > 0);
+      return { m, rows, total: rows.reduce((a, r) => a + r.v, 0) };
+    });
+    const max = Math.max(...months.map(x => x.total));
+    const el = $('chart');
+    $('chartTitle').textContent = `${viewY}年 月別の振込額（交通費込み）`;
+    const W = Math.max(280, el.clientWidth || 320), H = 180, L = 34, B = 20, T = 8;
+    const pw = W - L, ph = H - B - T;
+    const step = max ? niceStep(max) : 10000, top = max ? Math.ceil(max / step) * step : step * 4;
+    const y = v => T + ph - v / top * ph;
+    let svg = '';
+    for (let v = 0; v <= top + 1; v += step)
+      svg += `<line class="grid" x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${compact(v)}</text>`;
+    const slot = pw / 12, bw = Math.min(24, slot * 0.6);
+    months.forEach(({ m, rows }) => {
+      const cx = L + slot * m + slot / 2, x = cx - bw / 2;
+      svg += `<rect class="hit${m === viewM ? ' on' : ''}" data-m="${m}" x="${L + slot * m}" y="${T}" width="${slot}" height="${ph}" rx="4"/>`;
+      let base = 0;
+      rows.forEach((r, i) => {
+        const y0 = y(base), y1 = y(base + r.v);
+        const gap = i > 0 ? 2 : 0, h = Math.max(0, y0 - y1 - gap);
+        const d = i === rows.length - 1 ? roundTop(x, y1, bw, h, 4) : `M${x},${y1}h${bw}v${h}h${-bw}Z`;
+        if (h > 0) svg += `<path d="${d}" fill="${esc(r.job.color)}" pointer-events="none"/>`;
+        base += r.v;
+      });
+      svg += `<text class="axis${m === viewM ? ' on' : ''}" x="${cx}" y="${H - 5}" text-anchor="middle">${m + 1}</text>`;
+    });
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${viewY}年の月別振込額">${svg}</svg><div class="tip hidden" id="chartTip"></div>`;
+
+    const jobsInYear = data.jobs.filter(j => months.some(x => x.rows.some(r => r.job === j)));
+    $('chartLegend').innerHTML = jobsInYear.length > 1 ? jobsInYear.map(j => `<span><i style="background:${esc(j.color)}"></i>${esc(j.name)}</span>`).join('') : '';
+    $('chartTable').innerHTML = `<table><tr><th>月</th>${data.jobs.map(j => `<th>${esc(j.name)}</th>`).join('')}<th>合計</th></tr>`
+      + months.map(x => `<tr><td>${x.m + 1}月</td>${data.jobs.map(j => { const r = x.rows.find(r => r.job === j); return `<td>${r ? yen(r.v) : '−'}</td>`; }).join('')}<td><b>${yen(x.total)}</b></td></tr>`).join('')
+      + `<tr><td><b>合計</b></td>${data.jobs.map(j => `<td>${yen(months.reduce((a, x) => a + (x.rows.find(r => r.job === j)?.v || 0), 0))}</td>`).join('')}<td><b>${yen(months.reduce((a, x) => a + x.total, 0))}</b></td></tr></table>`;
+
+    const tip = $('chartTip');
+    const show = e => {
+      const hit = e.target.closest('.hit'); if (!hit) return tip.classList.add('hidden');
+      const x = months[hit.dataset.m];
+      tip.innerHTML = `<b>${x.m + 1}月 ${yen(x.total)}</b>` + (x.rows.length > 1 ? x.rows.map(r => `<br>${esc(r.job.name)} ${yen(r.v)}`).join('') : '');
+      const scale = el.clientWidth / W;
+      tip.style.left = Math.min(Math.max((L + slot * x.m + slot / 2) * scale, 60), el.clientWidth - 60) + 'px';
+      tip.style.top = Math.max(y(x.total) * scale - 6, 0) + 'px';
+      tip.classList.remove('hidden');
+    };
+    el.onmousemove = show;
+    el.onmouseleave = () => tip.classList.add('hidden');
+    el.onclick = e => { const hit = e.target.closest('.hit'); if (hit) { viewM = Number(hit.dataset.m); render(); } };
+  }
+
   function renderSalary() {
+    renderChart();
     const rows = salaryForMonth(viewY, viewM);
     const total = rows.reduce((a, r) => a + r.pay + r.transport, 0);
     const isPast = new Date(viewY, viewM + 1, 0) < new Date(today + 'T00:00');
@@ -574,7 +718,8 @@
   let dayDate = null;
   function openDay(date) {
     dayDate = date;
-    $('dayTitle').textContent = dayLabel(date);
+    const hol = holidayName(date);
+    $('dayTitle').innerHTML = dayLabel(date) + (hol ? `<div class="hol-name" style="margin:2px 0 0">${hol}</div>` : '');
     const list = sortShifts(data.shifts.filter(s => s.date === date));
     $('dayShifts').innerHTML = list.length ? list.map(s => shiftRow(s, false)).join('') : '<li class="empty" style="padding:8px">シフトはありません</li>';
     const tpls = data.jobs.flatMap(j => j.templates.map((t, i) => ({ j, t, i })));
@@ -811,8 +956,82 @@
     } catch (err) { alert('バックアップファイルを読み込めませんでした。'); }
   };
 
+  // ---------- シフトのお知らせ ----------
+  const remindOf = s => {
+    const r = data.settings.remind;
+    if (!r || r === '0') return null;
+    const start = new Date(`${s.date}T${s.start}`);
+    if (r === 'eve') { const d = new Date(start); d.setDate(d.getDate() - 1); d.setHours(21, 0, 0, 0); return d; }
+    return new Date(start - Number(r) * 60000);
+  };
+  const remindText = s => { const j = jobOf(s.jobId); return `${dayLabel(s.date)} ${s.start}〜${s.end} ${j ? j.name : ''}`; };
+  function showBanner(text) {
+    const b = document.createElement('div');
+    b.className = 'banner'; b.textContent = '⏰ ' + text;
+    b.onclick = () => b.remove();
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 10000);
+  }
+  function checkReminders() {
+    const t = Date.now();
+    let sent;
+    try { sent = JSON.parse(localStorage.getItem(KEY + '-notified')) || []; } catch (e) { sent = []; }
+    data.shifts.forEach(s => {
+      const at = remindOf(s), start = new Date(`${s.date}T${s.start}`);
+      const tag = `${s.id}@${s.date}T${s.start}@${data.settings.remind}`;
+      // お知らせ時刻を過ぎていて、シフトがまだ始まっていないもの
+      if (!at || t < at || t >= start || sent.includes(tag)) return;
+      sent.push(tag);
+      const body = remindText(s);
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification('もうすぐシフトです', { body, tag }); } catch (e) { showBanner(body); }
+      } else showBanner('もうすぐシフト：' + body);
+    });
+    try { localStorage.setItem(KEY + '-notified', JSON.stringify(sent.slice(-200))); } catch (e) {}
+  }
+  $('remindSelect').value = data.settings.remind || '0';
+  $('remindSelect').onchange = () => { data.settings.remind = $('remindSelect').value; save(); syncNotifyBtn(); };
+  function syncNotifyBtn() {
+    const btn = $('notifyPerm');
+    if (!('Notification' in window)) { btn.classList.add('hidden'); return; }
+    btn.disabled = Notification.permission !== 'default';
+    btn.textContent = Notification.permission === 'granted' ? '通知は許可済み' : Notification.permission === 'denied' ? '通知がブロックされています' : '通知を許可する';
+  }
+  $('notifyPerm').onclick = async () => {
+    await Notification.requestPermission();
+    syncNotifyBtn();
+    if (Notification.permission === 'granted') new Notification('通知をオンにしました', { body: 'シフトの前にお知らせします。' });
+  };
+  syncNotifyBtn();
+  setInterval(checkReminders, 30000);
+  checkReminders();
+
+  // .ics（カレンダーアプリ用）
+  $('exportIcs').onclick = () => {
+    const stamp = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const icsEsc = s => String(s).replace(/[\\;,]/g, c => '\\' + c).replace(/\n/g, '\\n');
+    const list = sortShifts(data.shifts.filter(s => s.date >= today));
+    if (!list.length) return alert('今日以降のシフトがありません。');
+    const r = data.settings.remind;
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//baito-shushi//JA', 'CALSCALE:GREGORIAN'];
+    list.forEach(s => {
+      const j = jobOf(s.jobId), start = new Date(`${s.date}T${s.start}`), end = new Date(`${s.date}T${s.end}`);
+      if (end <= start) end.setDate(end.getDate() + 1);
+      lines.push('BEGIN:VEVENT', `UID:${s.id}@baito-shushi`, `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
+        `SUMMARY:${icsEsc('バイト：' + (j ? j.name : ''))}`, `DESCRIPTION:${icsEsc(`給料 ${yen(calcShift(s).pay)}${s.memo ? '\n' + s.memo : ''}`)}`);
+      if (r && r !== '0') {
+        const before = Math.round((start - remindOf(s)) / 60000);
+        lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEsc('もうすぐシフト：' + (j ? j.name : ''))}`, `TRIGGER:-PT${before}M`, 'END:VALARM');
+      }
+      lines.push('END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    download(`baito_shifts_${today}.ics`, lines.join('\r\n'), 'text/calendar');
+  };
+
   syncWall();
   render();
+  addEventListener('resize', () => { if (tab === 'salary') renderChart(); });
 })();
 </script>
 </body>
