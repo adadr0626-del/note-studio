@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>なお垢 グロース設計図</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+body{margin:0}
+/* Layout: one reading column (~44em) like a long note, with post cards styled as X timeline posts; the 21時 night palette carries the 恋愛垢 mood */
+:root{
+  --bg:#f4f2f6; --surface:#ffffff; --ink:#261f2e; --muted:#6d6577; --line:#e3dee8;
+  --accent:#a8406a; --accent-soft:#f6e6ed; --night:#3b3357;
+  --ok:#2f7d5b; --warn:#a86414;
+  --f-display:"Zen Old Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#16131c; --surface:#211c29; --ink:#ece6f1; --muted:#a69db1; --line:#352e3f;
+  --accent:#e57ba3; --accent-soft:#3a2230; --night:#c9bff0; --ok:#6fcf9f; --warn:#e6a861; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#16131c; --surface:#211c29; --ink:#ece6f1; --muted:#a69db1; --line:#352e3f;
+  --accent:#e57ba3; --accent-soft:#3a2230; --night:#c9bff0; --ok:#6fcf9f; --warn:#e6a861; color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15.5px;line-height:1.85;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 72px}
+.wrap{max-width:46rem;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.4;margin:0}
+h1{font-size:clamp(1.9rem,6vw,2.7rem);letter-spacing:.02em}
+h2{font-size:1.5rem;margin-bottom:.9rem}
+h3{font-size:1.1rem}
+p{margin:0}
+.stack{display:flex;flex-direction:column;gap:1rem}
+section{padding-block:2.6rem;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:1rem}
+.eyebrow{font-size:.74rem;letter-spacing:.14em;color:var(--accent);font-weight:700}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header{padding-block:3.2rem 2.4rem;display:flex;flex-direction:column;gap:1rem}
+.lede{font-size:1.06rem;max-width:38em}
+.handle{font-family:var(--f-mono);font-size:.9rem;color:var(--night)}
+
+.note{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:.9rem}
+.note b{color:var(--warn)}
+
+/* account table */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.88rem;line-height:1.65}
+th,td{text-align:left;vertical-align:top;padding:12px 14px;border-bottom:1px solid var(--line)}
+th{font-size:.74rem;letter-spacing:.08em;color:var(--muted);font-weight:700;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td .h{font-family:var(--f-mono);font-size:.82rem;color:var(--night);white-space:nowrap}
+.pill{display:inline-block;font-size:.72rem;font-weight:700;padding:1px 8px;border-radius:99px;white-space:nowrap}
+.pill.ok{color:var(--ok);border:1px solid currentColor}
+.pill.guess{color:var(--warn);border:1px solid currentColor}
+.pill.none{color:var(--muted);border:1px solid currentColor}
+
+/* reasons */
+.reasons{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:12px}
+.reason{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.reason h3{font-size:1rem}
+.reason p{font-size:.9rem;color:var(--muted)}
+
+/* profile mock */
+.profile{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.profile .banner{background:var(--night);color:var(--bg);font-family:var(--f-display);font-size:1.15rem;padding:26px 18px;text-align:center;letter-spacing:.04em}
+.profile .body{padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.profile .name{font-weight:700;font-size:1.05rem}
+.profile .bio{white-space:pre-line;font-size:.94rem}
+.copyrow{display:flex;gap:8px;flex-wrap:wrap}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:.84rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:99px;padding:4px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+
+/* post cards */
+.posts{display:flex;flex-direction:column;gap:14px}
+.post{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:40px 1fr;gap:12px}
+.av{width:40px;height:40px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-family:var(--f-display)}
+.post .main{min-width:0;display:flex;flex-direction:column;gap:8px}
+.post .meta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;font-size:.82rem;color:var(--muted)}
+.post .meta strong{color:var(--ink)}
+.tag{font-size:.72rem;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:1px 8px;border-radius:99px}
+.post .text{white-space:pre-line;font-size:.97rem;line-height:1.8;overflow-wrap:anywhere}
+.post .why{font-size:.84rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+.post .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.count{font-size:.78rem;color:var(--muted)}
+.count.over{color:var(--warn)}
+button.copy{font:inherit;font-size:.8rem;font-weight:700;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:8px;padding:3px 12px;cursor:pointer}
+button.copy:hover{background:var(--accent-soft)}
+
+/* schedule */
+.sched{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.slot{display:grid;grid-template-columns:4.2rem 1fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.slot:last-child{border-bottom:0}
+.slot .t{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--night);font-size:.95rem}
+.slot .d{min-width:0;font-size:.92rem}
+.slot .d b{display:block}
+
+/* phases */
+.phases{display:flex;flex-direction:column;gap:12px}
+.phase{display:grid;grid-template-columns:5.5rem 1fr;gap:14px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.phase .when{font-family:var(--f-mono);font-size:.82rem;color:var(--accent);font-variant-numeric:tabular-nums}
+.phase ul{margin:6px 0 0;padding-left:1.1em;font-size:.92rem}
+.phase .goal{font-size:.86rem;color:var(--ok);font-weight:700;margin-top:6px}
+
+/* calc */
+.calc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.calc .inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:12px}
+.calc label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:var(--muted)}
+.calc input{font:inherit;font-family:var(--f-mono);font-size:1rem;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);min-width:0}
+.calc .out{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:12px}
+.calc .o{border-top:2px solid var(--accent);padding-top:8px}
+.calc .o .v{font-family:var(--f-mono);font-size:1.45rem;font-variant-numeric:tabular-nums}
+.calc .o .k{font-size:.8rem;color:var(--muted)}
+
+/* revenue */
+.rev{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.rev div{padding:12px 16px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:8.5rem 1fr;gap:12px;font-size:.92rem}
+.rev div:last-child{border-bottom:0}
+.rev b{font-weight:700}
+
+ul.dont{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
+ol.ask{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:6px}
+.src{font-size:.8rem;color:var(--muted);line-height:1.7}
+.src a{color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:.86rem;padding:8px 16px;border-radius:99px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (max-width:520px){
+  .phase,.slot{grid-template-columns:1fr;gap:4px}
+  .rev div{grid-template-columns:1fr;gap:2px}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">X運用設計 ／ 恋愛・本音ジャンル</div>
+  <h1>なお垢 グロース設計図</h1>
+  <p class="handle">@nao_nao_23</p>
+  <p class="lede">参考にした5アカウントがなぜインプレッションを取れているのかを分解し、そのまま真似ではなく「型」だけを抜き出して、なおのアカウント用の投稿・プロフィール・1日の運用・収益化の順番まで落とし込みました。</p>
+  <div class="note"><b>調査の前提。</b>X本体はこの作業環境から直接閲覧できなかったため、検索エンジンに載っている投稿・リプライ・トレンド要約と、アカウント名から分かる情報で分析しています。確認できた事実と推定は下の表で分けています。@nao_nao_23 の現状（フォロワー数・過去の投稿）も見られていないので、ゼロから伸ばす前提で組んでいます。</div>
+</header>
+
+<section>
+  <div class="eyebrow">01 ／ 参考アカウントの分解</div>
+  <h2>5アカウントは何を売っているか</h2>
+  <p>5つとも「恋愛 × 女性目線の本音」という同じ大ジャンルにいて、その中で<strong>立ち位置を1語で言える</strong>のが共通点です。裏テク、復縁、本音、姉御。プロフィールに飛んだ人が「この人は◯◯の人」と一瞬で分かるから、フォローまで進みます。</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>アカウント</th><th>立ち位置</th><th>確認できたこと</th><th>盗むべき型</th></tr></thead>
+      <tbody>
+        <tr><td><span class="h">@mirei_urateku</span><br><span class="pill ok">投稿を一部確認</span></td>
+          <td>恋愛の「裏テク」＋身近な人の恋愛を本音で語る観察役</td>
+          <td>職場の後輩（28）に33歳の彼氏ができた話を「正直パッとしない」と本音で書く投稿。交際3ヶ月の旅行トラブルの話にはフォロワーが自分の体験談をリプ。家事を「手伝う」夫の話には男性側から反論リプが付いている。</td>
+          <td>身近な誰かの恋愛を年齢入りで具体的に書き、読者が「うちの場合は」と語りたくなる余白を残す。</td></tr>
+        <tr><td><span class="h">@heisei_fukuen</span><br><span class="pill guess">名前から推定</span></td>
+          <td>平成生まれ × 復縁の特化</td>
+          <td>検索では投稿本文を確認できず。アカウント名から、世代と悩みを1つに絞った特化型と判断。</td>
+          <td>悩みの深いテーマ1点に集中。刺さる人には毎回刺さるので、保存・プロフ巡回・過去投稿の読み込みが起きやすい。</td></tr>
+        <tr><td><span class="h">@h0nne_chan</span><br><span class="pill guess">名前から推定</span></td>
+          <td>「本音ちゃん」。建前と本音のギャップを暴露する役</td>
+          <td>検索では投稿本文を確認できず。</td>
+          <td>「みんな言わないけど本当は」の構図。言いにくいことを先に言う人に、共感と反論の両方が集まる。</td></tr>
+        <tr><td><span class="h">@namine1023</span><br><span class="pill ok">投稿を一部確認</span></td>
+          <td>なみ姐。姉御キャラの恋愛アドバイス</td>
+          <td>「尽くしすぎる女」と「大切にされる女」を行動で比較する投稿。Xのトレンド要約「自分を大切にする恋愛アドバイス」の関連投稿として載っていた。</td>
+          <td>2択の比較リスト。さらに、伸びているテーマの波に同じ切り口で乗ると、トレンド要約にまとめて拾われる。</td></tr>
+        <tr><td><span class="h">@haru_itol</span><br><span class="pill none">情報なし</span></td>
+          <td>未分析</td>
+          <td>検索で一切ヒットせず、内容を確認できなかった。</td>
+          <td>伸びている投稿を数本貼ってもらえれば、同じ表に追加します。</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">02 ／ インプレッションが取れる理由</div>
+  <h2>伸びている理由は8つに分解できる</h2>
+  <div class="reasons">
+    <div class="reason"><h3>1. 全員が当事者のテーマ</h3><p>恋愛は年齢も性別も問わず誰でも一家言ある。専門知識ゼロで反応できるので、フォロワー外にも広がる。</p></div>
+    <div class="reason"><h3>2. 男女で反応が割れる</h3><p>女性は共感していいね・ブクマ、男性は「答え合わせ」や反論でリプ・引用。Xのおすすめは会話を重視するので、両方向の反応が付く投稿が一番強い。</p></div>
+    <div class="reason"><h3>3. 収益に効くのは男性の反応</h3><p>収益配分はPremium（認証済み）ユーザーからの反応が基準。Premiumユーザーには男性が多い印象があり、女性目線の本音に男性がリプする構図がそのまま収益になる。</p></div>
+    <div class="reason"><h3>4. 1行目で自分ごとにする</h3><p>断定（「ガチでこれ」）、対比（AとBの違い）、具体的なシーン（既読、ストーリーの足跡）。1行目で「私のことだ」と思わせて止める。</p></div>
+    <div class="reason"><h3>5. 余白と改行で滞在させる</h3><p>1文ずつ改行して余白を取る。読む時間が伸び、長文なら「さらに表示」のタップも反応として数えられる。</p></div>
+    <div class="reason"><h3>6. 体験談を引き出す</h3><p>mireiさんの投稿にはフォロワーが自分の旅行トラブルの話をリプしている。読者が自分の話を書きたくなる投稿は、リプ欄そのものがコンテンツになる。</p></div>
+    <div class="reason"><h3>7. キャラが1語で言える</h3><p>投稿がバズってもフォローされるかはプロフィール次第。立ち位置が明確だと「この人の投稿をもっと見たい」になる。</p></div>
+    <div class="reason"><h3>8. 夜に強く、量が多い</h3><p>恋愛の悩みは夜に深くなる。21時から深夜の時間帯に本命の投稿を置き、1日に何本も打席に立っている。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">03 ／ なおの立ち位置</div>
+  <h2>「恋愛のモヤモヤを言語化する、同世代の代弁者」</h2>
+  <p>参考の5人は裏テク、復縁、本音、姉御で席が埋まっています。なおは上から教える側ではなく、読者と同じ目線で「なんか嫌」「なんか好き」を言葉にする役で入るのが一番ぶつかりません。マッチングアプリ、LINE、インスタのストーリーなど、20代の恋愛で実際に起きている場面を題材にします。</p>
+  <p class="small muted">ハンドルの「23」が年齢なら、プロフィールでも年齢を出すと同世代の共感が強くなります。違う場合は年齢の部分を差し替えてください。実際の自分の属性と違うキャラは作らないこと（長く続かず、バレたときに信用が全部消えます）。</p>
+
+  <div class="profile">
+    <div class="banner">その「なんか嫌」、言葉にします。</div>
+    <div class="body">
+      <div class="name" id="pf-name">なお｜恋愛のモヤモヤ言語化係</div>
+      <div class="handle">@nao_nao_23</div>
+      <div class="bio" id="pf-bio">23歳｜友達の恋愛相談を聞きすぎて言語化が得意になった人
+本命になれない夜、既読が気になる夜に読んでほしい話
+毎晩21時に投稿してます
+有料note → 準備中</div>
+    </div>
+  </div>
+  <div class="copyrow">
+    <button class="copy" data-copy="#pf-name">名前をコピー</button>
+    <button class="copy" data-copy="#pf-bio">自己紹介をコピー</button>
+  </div>
+  <div class="note small"><b>固定ポスト。</b>過去で一番伸びた投稿か、「なおってこういう人」が分かる自己紹介スレッドを固定します。最初の1ヶ月は下の例文の「本音型」を固定し、伸びた投稿が出たら差し替えます。収益化後はここからnoteへ誘導します。</div>
+</section>
+
+<section>
+  <div class="eyebrow">04 ／ 投稿の型と例文</div>
+  <h2>そのまま使える投稿 16本</h2>
+  <p>参考アカウントの文章は使わず、型だけを借りて書いたオリジナルです。「友達に聞いた」「◯人調べ」などの部分は、<strong>実際に聞いた内容に書き換えてから</strong>投稿してください。文字数はXの数え方（全角2・半角1、無料枠は280まで）で表示しています。</p>
+  <div class="chips" id="chips" role="group" aria-label="型で絞り込む"></div>
+  <div class="posts" id="posts"></div>
+</section>
+
+<section>
+  <div class="eyebrow">05 ／ 1日の運用</div>
+  <h2>1日5投稿と、リプ周り30分</h2>
+  <p>時間帯は初期値です。2週間回したらXのアナリティクスで時間帯ごとの平均インプを比べ、強い時間に寄せてください。</p>
+  <div class="sched">
+    <div class="slot"><div class="t">07:30</div><div class="d"><b>短文の共感（一言型）</b>通勤中にサッと読める1〜3行。いいねを集めて1日の土台を作る。</div></div>
+    <div class="slot"><div class="t">12:15</div><div class="d"><b>比較型・リスト型</b>昼休みに保存される実用ネタ。ブクマが多い投稿はおすすめに載りやすい。</div></div>
+    <div class="slot"><div class="t">18:30</div><div class="d"><b>問いかけ型・賛否型</b>夜まで会話が続くように、答えたくなる質問を置く。リプには全部返す。</div></div>
+    <div class="slot"><div class="t">21:00</div><div class="d"><b>本命の1本（エピソード型・本音型）</b>その日一番自信がある投稿。投稿後30分はアプリを閉じずにリプへ返信する。</div></div>
+    <div class="slot"><div class="t">23:30</div><div class="d"><b>寄り添い型（失恋・復縁）</b>眠れない人向けのやわらかい投稿。プロフ巡回とフォローが一番起きやすい時間。</div></div>
+    <div class="slot"><div class="t">随時</div><div class="d"><b>リプ周り 1日30分</b>同ジャンルの大きいアカウント（参考の5つを含む）が投稿したら10分以内に、自分の体験や別の視点をリプする。「わかります」だけのリプや、同じ文の使い回しはスパム扱いされるのでやらない。</div></div>
+  </div>
+  <div class="note small"><b>週1の振り返り。</b>その週のインプ上位3本を見て、同じテーマを別の型で書き直す（比較型で伸びたら、次はエピソード型で）。勝ち型7割、新しい型3割で回す。</div>
+</section>
+
+<section>
+  <div class="eyebrow">06 ／ 収益化まで</div>
+  <h2>90日で収益化ラインに乗せる</h2>
+  <p>収益配分の参加条件は、Premium加入、認証済みフォロワー500人、直近3ヶ月でオーガニック500万インプレッション、というのが多くの解説で共通しています。2026年9月に新制度に移ったとする記事もあり、条件は変わっている可能性があるので、申請前にXの公式ヘルプで確認してください。</p>
+
+  <div class="calc">
+    <h3>1投稿あたりの目標インプ</h3>
+    <div class="inputs">
+      <label for="c-goal">目標インプレッション
+        <input id="c-goal" type="number" inputmode="numeric" min="0" step="100000" value="5000000"></label>
+      <label for="c-days">期間（日）
+        <input id="c-days" type="number" inputmode="numeric" min="1" value="90"></label>
+      <label for="c-posts">1日の投稿数
+        <input id="c-posts" type="number" inputmode="numeric" min="1" value="5"></label>
+    </div>
+    <div class="out">
+      <div class="o"><div class="v" id="o-day">-</div><div class="k">1日に必要なインプ</div></div>
+      <div class="o"><div class="v" id="o-post">-</div><div class="k">1投稿の平均インプ</div></div>
+      <div class="o"><div class="v" id="o-total">-</div><div class="k">期間中の投稿数</div></div>
+    </div>
+    <p class="small muted">平均は数本のバズ投稿が大きく引き上げます。毎回この数字を出す必要はなく、月に2〜3本、10万インプ超えが出ればほぼ届きます。リプ周りで付いた自分のリプへのインプも合計に入ります。</p>
+  </div>
+
+  <div class="phases">
+    <div class="phase"><div class="when">1週目</div><div>
+      <h3>土台づくり</h3>
+      <ul><li>Premium加入（Basicは収益化の対象外）</li><li>名前・自己紹介・ヘッダー・固定ポストを上の内容で整える</li><li>参考の5つ＋同ジャンルで伸びている20アカウントをリスト化し、伸びた投稿100本を手作業で型に分類する</li></ul>
+      <div class="goal">目標：プロフに来た人が3秒で「何の人か」分かる状態</div></div></div>
+    <div class="phase"><div class="when">1〜30日</div><div>
+      <h3>打席を増やす</h3>
+      <ul><li>1日5投稿＋リプ周り30分を毎日</li><li>16本の例文を自分の体験で書き換えて消化し、2週目から自分のネタに移る</li><li>伸びた投稿の型とテーマをメモに残す</li></ul>
+      <div class="goal">目標：1投稿平均3,000インプ、フォロワー＋1,000</div></div></div>
+    <div class="phase"><div class="when">31〜90日</div><div>
+      <h3>勝ち型に寄せる</h3>
+      <ul><li>勝ち型7割・新型3割</li><li>週1本、3〜5ポストのスレッドか長文で「保存版」を出す</li><li>認証済みフォロワーを増やすため、Premiumユーザーが多い男性の反応を拾う問いかけ型を週3本</li></ul>
+      <div class="goal">目標：90日で500万インプ、認証済みフォロワー500 → 収益化申請</div></div></div>
+    <div class="phase"><div class="when">91日〜</div><div>
+      <h3>収益の柱を足す</h3>
+      <ul><li>伸びたテーマを深掘りした有料noteを月1本（このリポジトリのNOTE記事制作スタジオで作れる）</li><li>固定ポストとプロフのリンクからnoteへ誘導</li><li>相談が増えてきたら有料の恋愛相談を開く</li></ul>
+      <div class="goal">目標：X収益＋noteで月の収入を作る</div></div></div>
+  </div>
+
+  <h3>収益の柱</h3>
+  <div class="rev">
+    <div><b>X収益配分</b><span>土台。単価は非公開で、個人の報告では800万インプで約50ドルという例もあり、これだけで生活するにはかなりの量が必要です。</span></div>
+    <div><b>有料note</b><span>主力。「脈ありLINEの見分け方 完全版」「既読スルーされた後の送り方テンプレ」など、伸びた投稿の続きを売る。</span></div>
+    <div><b>恋愛相談</b><span>相談DMが増えてきたら有料化。相談内容は投稿ネタにもなる（本人が特定されない形に変えて、許可を取って使う）。</span></div>
+    <div><b>アフィリエイト</b><span>マッチングアプリなど。広告だと分かる表記（#PR）が法律で必須なので必ず付ける。</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">07 ／ やらないこと</div>
+  <h2>アカウントを潰す行動</h2>
+  <ul class="dont">
+    <li>参考アカウントの投稿の言い回しをそのまま使う。オリジナル性が収益の審査対象で、パクリは晒されると一発で終わる。</li>
+    <li>作り話のエピソードを実話として投稿する。題材は自分の体験か、実際に聞いた話を本人が分からない形に変えたものだけ。</li>
+    <li>他人のLINEやDMのスクショを無断で載せる。</li>
+    <li>中身のない定型リプを大量に送る（インプレゾンビ扱いで表示が落ちる）。</li>
+    <li>性的な釣りや、特定の性別をまとめて叩く投稿。一時的に伸びても、凍結や通報でアカウントごと失う。</li>
+  </ul>
+</section>
+
+<section>
+  <div class="eyebrow">08 ／ 次にもらいたいもの</div>
+  <h2>精度を上げるために</h2>
+  <p>次のものを貼ってもらえれば、推定で埋めている部分を実データに置き換え、例文もなおの声に合わせて書き直します。</p>
+  <ol class="ask">
+    <li>@nao_nao_23 の今のフォロワー数、Premium加入の有無、これまでの投稿テーマ</li>
+    <li>参考5アカウントで「これが良い」と思った投稿の本文（各3〜5本、表示回数も分かれば）</li>
+    <li>@haru_itol がどんな投稿をしているか</li>
+    <li>なお本人のプロフィールに出せる事実（年齢、仕事、恋愛でよく相談されること）</li>
+  </ol>
+  <p class="src">参照：<a href="https://x.com/i/trending/2113531050622119981">Xトレンド「自分を大切にする」恋愛アドバイス</a> ／ <a href="https://x.com/rui11234567890">@mirei_urateku へのリプライ例</a> ／ <a href="https://x.com/UONYr9ELt6Whz5Y">家事の夫の投稿へのリプライ例</a> ／ <a href="https://www.shuttlerock.co.jp/article/detail/post-21725/">X収益化条件（Shuttlerock）</a> ／ <a href="https://tofu.misosil.com/articles/x-monetization/">X収益化の条件と仕組み 2026年版</a> ／ <a href="https://www.ai-toptier.com/blog-post/original-content-rewards-2026">Original Content Rewards解説</a> ／ <a href="https://note.com/ginka1108/n/n080290b75a37">Xを収益化してみた話（個人の報告）</a></p>
+</section>
+
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const POSTS = [
+ {type:"比較型", time:"12:15", text:`本命にされる子と、都合よく扱われる子の違い。
+
+都合よく扱われる子
+・会えない理由を全部のみ込む
+・「いつでもいいよ」が口癖
+・既読の速さで愛情を測る
+
+本命にされる子
+・自分の予定を先に埋める
+・寂しいは一回だけ、ちゃんと言う
+・次いつ会うかを相手に決めさせる
+
+優しいのと、なんでも許すのは別。`, why:"2択で「自分はどっち？」と読ませる。保存されやすい。"},
+ {type:"比較型", time:"12:15", text:`脈なしLINEと脈ありLINE、違いは返信の速さじゃない。
+
+脈なし：質問で終わらない
+脈あり：どうでもいい質問で終わる
+
+「今日なに食べた？」みたいな、返さなくてもいい質問をわざわざ付けてくる人は、会話を終わらせたくない人。`, why:"誰もが一度は気にした既読・返信のテーマを、新しい物差しで言い直す。"},
+ {type:"リスト型", time:"12:15", text:`男友達に「この子は手放したくない」って思う瞬間を聞いたら、ほぼこれだった。
+
+・返信が遅くても責めない
+・前に話したことを覚えてる
+・自分の機嫌を自分で直せる
+・「すごいね」より「それどうやったの？」って聞いてくる
+・別れ際があっさりしてる
+
+最後のやつ、意外と効く。`, why:"男性からの「わかる」「俺は違う」リプが付く。※実際に聞いた内容に書き換える"},
+ {type:"リスト型", time:"12:15", text:`マッチングアプリ、会う前に冷めた瞬間（友達10人に聞いた）
+
+1位 写真が全部サングラス
+2位 「今なにしてる？」が1日3回
+3位 お店を「どこでもいいよ」で丸投げ
+4位 初回から長電話をすすめてくる
+5位 「会ったら分かるよ」で質問に答えない
+
+3位、男女どっちもやりがち。`, why:"ランキングは最後まで読まれる。※実際に聞いて順位を作る"},
+ {type:"本音型", time:"21:00", text:`正直に言うね。
+
+「いい人なんだけどね」って断るときの本当の理由は、
+相手が"いい人"だからじゃなくて、
+その人といるときの自分が、あんまり好きじゃないから。
+
+相手が悪いわけじゃない。
+それだけで、恋はちゃんと終わる。`, why:"みんなが言わない理由を先に言う。固定ポスト候補。"},
+ {type:"本音型", time:"21:00", text:`23歳の本音。
+
+「結婚とかまだ考えてない」って言いながら、
+友達の結婚報告のストーリーは3回見返してる。`, why:"短くて自虐。同世代のいいね・引用が集まる。"},
+ {type:"エピソード型", time:"21:00", text:`職場の先輩（30）の彼氏の話。
+
+デートのお店はいつも先輩が決めてて、
+「彼、優柔不断でさ〜」って笑ってたんだけど。
+
+この前、彼が初めて自分で予約したお店が、
+先輩が半年前に一回だけ「行ってみたい」って言ったお店だったらしい。
+
+優柔不断なんじゃなくて、
+ずっと聞いてただけだった。`, why:"年齢入りの身近な人の話＋最後に意味が反転。※実話を本人が分からない形にして使う"},
+ {type:"エピソード型", time:"21:00", text:`友達が彼氏と別れた理由が
+「お皿を洗ってくれたあと、毎回"洗っといたよ"って報告してくるから」だった。
+
+最初は笑ったけど、聞いてるうちにわかってきた。
+やってくれたことじゃなくて、
+"褒められ待ち"が毎日続くのが疲れたんだって。`, why:"家事の賛否は男性から反論リプが来やすい。※実話ベースで"},
+ {type:"賛否型", time:"18:30", text:`付き合う前のデート、全額おごり派？割り勘派？
+
+私は「誘った方がちょっと多めに出す」がいちばん平和だと思ってる。
+全額出してもらうと、次に断りにくくなるから。
+
+みんなはどう？`, why:"自分の答えを先に出してから聞く。答えやすく、男女どちらも参加する。"},
+ {type:"問いかけ型", time:"18:30", text:`元恋人に言われて、今でも忘れられない一言ってある？
+
+私は「なおは一人でも大丈夫そうだよね」。
+褒め言葉みたいだけど、あれは別れの言葉だった。`, why:"リプ欄に体験談が集まり、リプ欄自体が読み物になる。"},
+ {type:"問いかけ型", time:"18:30", text:`男の人に本気で聞きたい。
+
+「いつでも連絡して」って言う人に限って、
+連絡すると返信が遅いのはなんで？`, why:"男性の「答え合わせ」リプを狙う。Premiumユーザーの反応は収益に直結。"},
+ {type:"一言型", time:"07:30", text:`好きな人の前で「全然大丈夫！」って言った日に限って、帰り道ぜんぜん大丈夫じゃない。`, why:"1行で情景が浮かぶ。朝の通勤時間向け。"},
+ {type:"一言型", time:"07:30", text:`返信を待ってる時間に、自分のことを少しずつ嫌いになるなら、その恋はちょっと休んでいい。`, why:"説教にならない肯定。いいねとブクマ。"},
+ {type:"寄り添い型", time:"23:30", text:`連絡が来なくなった人のこと、まだ毎日考えてしまう夜へ。
+
+忘れようとしなくていいよ。
+「考えた回数が昨日より1回減った」で、もう十分えらい。`, why:"夜中に一番プロフ巡回が起きるタイプ。"},
+ {type:"寄り添い型", time:"23:30", text:`復縁がうまくいく人って、
+「戻りたい」じゃなくて「もう一回知り合いたい」っていう温度で連絡してる。
+
+長い謝罪文より、
+「この前◯◯の前通ったよ」くらいの軽さのほうが返ってくる。`, why:"復縁は悩みが深いテーマ。保存版スレッドや有料noteにつなげやすい。"},
+ {type:"スレッド型", time:"21:00", text:`好きな人に"重い"と思われない連絡の頻度、ちゃんと言葉にしてみた。
+
+1. 相手から来た回数＋1回まで
+2. 返信がない日は追いLINEしない
+3. 夜は「おやすみ」で切り上げる側になる
+4. 会った翌日は自分から一言だけ送る
+
+詳しくはツリーに書いた↓`, why:"3〜5ポストのツリーにする。ツリーの最後で有料noteや固定ポストへ誘導。"}
+];
+
+const TYPES = ["すべて", ...new Set(POSTS.map(p=>p.type))];
+const chipsEl = document.getElementById("chips");
+const postsEl = document.getElementById("posts");
+let current = "すべて";
+
+function xWeight(s){ let n=0; for(const ch of s){ n += ch.codePointAt(0) <= 0x10FF ? 1 : 2; } return n; }
+function esc(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function renderChips(){
+  chipsEl.innerHTML = TYPES.map(t=>`<button class="chip" id="chip-${TYPES.indexOf(t)}" aria-pressed="${t===current}" data-t="${esc(t)}">${esc(t)}</button>`).join("");
+}
+function renderPosts(){
+  postsEl.innerHTML = POSTS.map((p,i)=>({p,i})).filter(({p})=>current==="すべて"||p.type===current).map(({p,i})=>{
+    const w = xWeight(p.text); const over = w>280;
+    return `<article class="post"><div class="av" aria-hidden="true">な</div><div class="main">
+      <div class="meta"><strong>なお</strong><span class="mono">@nao_nao_23</span><span class="tag">${esc(p.type)}</span><span class="mono">${p.time}推奨</span></div>
+      <div class="text" id="post-${i}">${esc(p.text)}</div>
+      <div class="why">${esc(p.why)}</div>
+      <div class="foot"><span class="count mono ${over?"over":""}">${w}/280${over?"　Premiumの長文 or ツリーに分割":""}</span><button class="copy" data-copy="#post-${i}">コピー</button></div>
+    </div></article>`;
+  }).join("");
+}
+chipsEl.addEventListener("click", e=>{
+  const b = e.target.closest(".chip"); if(!b) return;
+  current = b.dataset.t; renderChips(); renderPosts();
+  try{ localStorage.setItem("nao-filter", current); }catch(_){}
+});
+try{ const s = localStorage.getItem("nao-filter"); if(s && TYPES.includes(s)) current = s; }catch(_){}
+renderChips(); renderPosts();
+
+const toast = document.getElementById("toast"); let tt;
+function showToast(m){ toast.textContent=m; toast.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove("show"),1600); }
+document.addEventListener("click", e=>{
+  const b = e.target.closest("button.copy"); if(!b) return;
+  const el = document.querySelector(b.dataset.copy); if(!el) return;
+  const text = el.textContent;
+  const fallback = ()=>{ const r=document.createRange(); r.selectNodeContents(el); const s=getSelection(); s.removeAllRanges(); s.addRange(r); showToast("選択しました。長押しでコピーしてください"); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>showToast("コピーしました"), fallback);
+  } else fallback();
+});
+
+const fmt = n => isFinite(n) ? Math.round(n).toLocaleString("ja-JP") : "-";
+function calc(){
+  const g = +document.getElementById("c-goal").value, d = +document.getElementById("c-days").value, p = +document.getElementById("c-posts").value;
+  document.getElementById("o-day").textContent = d>0 ? fmt(g/d) : "-";
+  document.getElementById("o-post").textContent = d>0&&p>0 ? fmt(g/d/p) : "-";
+  document.getElementById("o-total").textContent = d>0&&p>0 ? fmt(d*p)+"本" : "-";
+}
+["c-goal","c-days","c-posts"].forEach(id=>document.getElementById(id).addEventListener("input", calc));
+calc();
+</script>
+</body>
+</html>
